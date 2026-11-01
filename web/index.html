@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Msimu - seasonal advisory</title>
+<meta name="description" content="Seasonal climate outlook and farming advisory for ASAL Kenya. ECMWF SEAS5 via Open-Meteo, ERA5 2005-2024 baseline." />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  :root {
+    --paper: #f7f5f0;
+    --ink: #16181a;
+    --ink-2: #4a4f55;
+    --line: #dcd8cf;
+    --card: #fffdf9;
+    --accent: #1d5c3f;
+    --above: #1f6f8b;
+    --near: #7a7f85;
+    --below: #b4691a;
+    --unknown: #b8b3a8;
+    --alert: #9b2c2c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 56px; }
+
+  header { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; border-bottom: 2px solid var(--ink); padding-bottom: 16px; }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  h1 { font-size: 30px; letter-spacing: -0.02em; margin: 0; font-weight: 800; }
+  .tag { color: var(--ink-2); font-size: 14px; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  select, button {
+    font: inherit; padding: 7px 11px; border: 1px solid var(--line); background: var(--card);
+    color: var(--ink); border-radius: 8px; cursor: pointer;
+  }
+  button:hover, select:hover { border-color: var(--ink-2); }
+  button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  label { font-size: 13px; color: var(--ink-2); }
+  .switch { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .switch button { border: 0; border-radius: 0; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; margin-top: 22px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--ink-2); margin: 0 0 12px; font-weight: 700; }
+
+  #map { height: 300px; border-radius: 8px; border: 1px solid var(--line); }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--ink-2); margin-top: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0,0,0,.15); }
+  .attrib { font-size: 11px; color: var(--ink-2); margin: 6px 0 0; }
+
+  .headline { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+    font-size: 13px; font-weight: 700; color: #fff; background: var(--unknown);
+  }
+  .chip.above { background: var(--above); }
+  .chip.near { background: var(--near); }
+  .chip.below { background: var(--below); }
+  .chip.unknown { background: var(--unknown); }
+  .month { font-size: 26px; font-weight: 800; letter-spacing: -0.01em; }
+
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 7px 6px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); font-weight: 700; }
+  tbody tr:hover { background: #f2efe8; }
+  .partial { color: var(--ink-2); font-style: italic; }
+  .bar { position: relative; height: 9px; background: #ece8e0; border-radius: 5px; overflow: hidden; min-width: 90px; }
+  .bar span { position: absolute; inset: 0 auto 0 0; border-radius: 5px; }
+  .bar i { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); opacity: .55; }
+
+  ul.advice { margin: 0; padding-left: 18px; }
+  ul.advice li { margin-bottom: 8px; }
+
+  .note { font-size: 13px; color: var(--ink-2); }
+  .warn { border-left: 3px solid var(--alert); padding-left: 10px; }
+  footer { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 13px; color: var(--ink-2); }
+  footer code { background: #ece8e0; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .state { padding: 34px 8px; text-align: center; color: var(--ink-2); }
+  .state.err { color: var(--alert); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>Msimu</h1>
+      <span class="tag" id="tagline">Utabiri wa msimu &rarr; hatua ya kilimo</span>
+    </div>
+    <div class="controls">
+      <label for="county" id="lbl-county">Kaunti</label>
+      <select id="county" aria-label="County"></select>
+      <label for="ward" id="lbl-ward">Kata</label>
+      <select id="ward" aria-label="Ward"></select>
+      <label><input type="checkbox" id="irr" /> <span id="lbl-irr">Umwagiliaji</span></label>
+      <div class="switch" role="group" aria-label="Language">
+        <button id="sw" aria-pressed="true">SW</button>
+        <button id="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="card" id="pointcard" style="margin-bottom:20px">
+    <h2 id="lbl-point-h">Tafuta mahali husika</h2>
+    <div class="controls">
+      <button id="geolocate" type="button">Tumia GPS yangu</button>
+      <label for="plat" id="lbl-plat">Latitudo</label>
+      <input id="plat" type="number" step="0.0001" inputmode="decimal" placeholder="-1.28496" style="width:9em" />
+      <label for="plon" id="lbl-plon">Longitudo</label>
+      <input id="plon" type="number" step="0.0001" inputmode="decimal" placeholder="36.89468" style="width:9em" />
+      <button id="plookup" type="button">Tafuta</button>
+    </div>
+    <div class="controls" style="margin-top:10px">
+      <label for="paspect" id="lbl-paspect">Jua mahali pako</label>
+      <select id="paspect">
+        <option value="unknown">Sijui</option>
+        <option value="full_sun">Jua kila siku</option>
+        <option value="morning_sun">Jua asubuhi</option>
+        <option value="afternoon_shade">Kivuli jioni</option>
+        <option value="shaded">Kivuli sana</option>
+      </select>
+      <label for="pwater" id="lbl-pwater">Chanzo cha maji</label>
+      <select id="pwater">
+        <option value="unknown">Sijui</option>
+        <option value="tap">Mfereji/bomba</option>
+        <option value="rainwater">Mvua</option>
+        <option value="purchased">Maji ya kununua</option>
+      </select>
+      <label for="pter" id="lbl-pter">Hali ya mvua</label>
+      <select id="pter">
+        <option value="near">Kawaida</option>
+        <option value="below">Chini ya kawaida</option>
+        <option value="above">Juu ya kawaida</option>
+      </select>
+      <button id="pkitchen" type="button">Ushauri wa bustani ya jikoni</button>
+    </div>
+    <p class="note" id="point-status" style="margin-top:10px"></p>
+    <div id="point-result" style="margin-top:10px"></div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2 id="h-map">Ramani ya kaunti</h2>
+      <div id="map" role="img" aria-label="County ward map"></div>
+      <div id="legend" class="legend" hidden></div>
+      <p class="note" id="map-note" style="margin-top:10px"></p>
+      <p class="attrib" id="ward-attrib" hidden></p>
+    </section>
+
+    <section class="card">
+      <h2 id="h-now">Kipindi kinachofuata</h2>
+      <div id="now" class="state">Inapakia&hellip;</div>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:20px">
+    <h2 id="h-table">Miezi 7 ijayo (ECMWF SEAS5 vs wastani wa ERA5 2005-2024)</h2>
+    <div id="table"><div class="state">Inapakia&hellip;</div></div>
+    <p class="note" id="table-note" style="margin-top:10px"></p>
+  </section>
+
+  <section class="card" style="margin-top:20px">
+    <h2 id="h-advice">Ushauri</h2>
+    <div id="advice"><div class="state">Inapakia&hellip;</div></div>
+  </section>
+
+  <footer>
+    <p id="src"></p>
+    <p id="caveat" class="warn"></p>
+    <p id="howto"></p>
+  </footer>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+const T = {
+  sw: {
+    tagline: 'Utabiri wa msimu → hatua ya kilimo',
+    county: 'Kaunti', ward: 'Kata', irrigation: 'Umwagiliaji',
+    map: 'Ramani ya kaunti',
+    mapNote: (s, el, wb) => `${s.name}, ${s.sub_county}: ${el} m juu ya bahari. Mvua ya mwaka ni ${wb}% ya mahitaji ya mimea.`,
+    mapNoteCounty: (name, n) => `Kata ${n} za ${name}: rangi inaonyesha hali ya mvua ya mwezi unaofuata unaotegemewa. Bofya kata kusoma ushauri.`,
+    mapMissing: 'Faili la mipaka halipatikani kwa kaunti hii.',
+    nearestCell: (km) => `Seli ya ERA5 ya karibu (km ${km} mbali): thamani ni za eneo hilo, si za kata hii haswa.`,
+    mapLegend: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', noData: 'hakuna taarifa bado' },
+    noWard: 'hakuna taarifa bado',
+    wardAttrib: 'Mipaka ya kata: geoBoundaries (CC BY 4.0)',
+    now: 'Kipindi kinachofuata', table: 'Miezi 7 ijayo (ECMWF SEAS5 vs wastani wa ERA5 2005-2024)',
+    advice: 'Ushauri', loading: 'Inapakia…',
+    cols: ['Mwezi', 'Utabiri', 'Wastani', 'Tofauti', 'Hali', 'Uhakika', 'Siku'],
+    tercile: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', unknown: 'hakuna taarifa' },
+    conf: { high: 'juu', medium: 'wastani', low: 'chini', none: ' - ' },
+    partial: 'haijakamilika',
+    noData: 'Hakuna taarifa ya kutegemewa kwa kipendi hiki.',
+    src: 'Chanzo: ECMWF SEAS5 kupitia Open-Meteo (hakuna API key, hakuna gharama), ukilinganishwa na ERA5 2005-2024.',
+    caveat: 'Data ya SEAS5 haijarekebishwa kwa upendeleo (not bias-corrected). Taarifa hii ni ya eneo, si ya shamba moja. Huduma ya majaribio - onana na afisa kilimo wa kata kabla ya kupanga.',
+    howto: 'Mtazamo wa afisa ugani: milimita yanaonyeshwa hapa kwa uchambuzi. Skirini za USSD kwa mkulima zinaonyesha hali tu, si milimita. API: <code>/county-outlook?county=kajiado</code> | <code>/advisory?ward=kajiado--nkaimurunya&amp;lang=sw</code> | USSD: <code>POST /ussd</code>',
+    err: 'Imeshindikana kupata data.',
+  },
+  en: {
+    tagline: 'Seasonal forecast → farming decision',
+    county: 'County', ward: 'Ward', irrigation: 'Irrigation',
+    map: 'County map',
+    mapNote: (s, el, wb) => `${s.name}, ${s.sub_county}: ${el} m elevation. Annual rainfall is ${wb}% of crop water demand.`,
+    mapNoteCounty: (name, n) => `${n} wards of ${name}: colour shows the next usable month's rainfall outlook. Click a ward to read its advisory.`,
+    mapMissing: 'Boundary file not available for this county.',
+    nearestCell: (km) => `Nearest ERA5 cell (${km} km away): these values describe that cell, not this ward exactly.`,
+    mapLegend: { above: 'above normal', near: 'near normal', below: 'below normal', noData: 'no data yet' },
+    noWard: 'no data yet',
+    wardAttrib: 'Ward boundaries: geoBoundaries (CC BY 4.0)',
+    now: 'Next usable month', table: 'Next 7 months (ECMWF SEAS5 vs ERA5 2005-2024 baseline)',
+    advice: 'Advisory', loading: 'Loading…',
+    cols: ['Month', 'Forecast', 'Median', 'Anomaly', 'Tercile', 'Confidence', 'Days'],
+    tercile: { above: 'above normal', near: 'near normal', below: 'below normal', unknown: 'unknown' },
+    conf: { high: 'high', medium: 'medium', low: 'low', none: ' - ' },
+    partial: 'partial',
+    noData: 'No usable outlook for this period.',
+    src: 'Source: ECMWF SEAS5 via Open-Meteo (no API key, no cost), against an ERA5 2005-2024 baseline.',
+    caveat: 'SEAS5 data are not bias-corrected. This is an area forecast, not a single-farm forecast. Pilot service - consult your ward extension officer before planning.',
+    howto: 'Extension-officer view: millimetres are shown here for analysis. Farmer-facing USSD screens show terciles only, never millimetres. API: <code>/county-outlook?county=kajiado</code> | <code>/advisory?ward=kajiado--nkaimurunya&amp;lang=en</code> | USSD: <code>POST /ussd</code>',
+    err: 'Could not load data.',
+  },
+};
+const TER_COLOR = { above: '#1f6f8b', near: '#7a7f85', below: '#b4691a', unknown: '#b8b3a8' };
+
+let lang = 'sw';
+let map, marker;
+
+const $ = (id) => document.getElementById(id);
+
+function applyStrings(t) {
+  document.documentElement.lang = lang;
+  $('tagline').textContent = t.tagline;
+  $('lbl-county').textContent = t.county;
+  $('lbl-ward').textContent = t.ward;
+  $('lbl-irr').textContent = t.irrigation;
+  $('h-map').textContent = t.map;
+  $('h-now').textContent = t.now;
+  $('h-table').textContent = t.table;
+  $('h-advice').textContent = t.advice;
+  $('src').textContent = t.src;
+  $('caveat').textContent = t.caveat;
+  $('howto').innerHTML = t.howto;
+}
+
+function chip(tercile, t) {
+  return `<span class="chip ${tercile}">${t.tercile[tercile] ?? tercile}</span>`;
+}
+
+function renderNow(d, t, site) {
+  const now = $('now');
+  if (!d.month || d.tercile === 'unknown') {
+    now.innerHTML = `<div class="state">${t.noData}</div>`;
+    return;
+  }
+  now.innerHTML = `
+    <div class="headline">
+      <span class="month">${d.month}</span>
+      ${chip(d.tercile, t)}
+      <span class="note">${t.conf[d.confidence] ?? d.confidence}</span>
+    </div>
+    <p class="note" style="margin:10px 0 0">
+      ${d.forecast_mm} mm · median ${d.median_mm} mm ·
+      ${Math.round(((d.forecast_mm - d.median_mm) / d.median_mm) * 100)}%
+    </p>`;
+}
+
+function renderTable(months, t) {
+  const host = $('table');
+  if (!months?.length) { host.innerHTML = `<div class="state">${t.noData}</div>`; return; }
+  const max = Math.max(...months.map((m) => Math.max(m.forecast_mm ?? 0, m.median_mm ?? 0)), 1);
+  const rows = months.map((m) => {
+    const w = Math.round(((m.forecast_mm ?? 0) / max) * 100);
+    const mw = Math.round(((m.median_mm ?? 0) / max) * 100);
+    const anom = m.median_mm ? `${Math.round(((m.forecast_mm - m.median_mm) / m.median_mm) * 100)}%` : ' - ';
+    return `<tr>
+      <td>${m.month}${m.complete ? '' : ` <span class="partial">(${t.partial} ${m.days_covered ?? '?'}/${m.days_expected ?? '?'})</span>`}</td>
+      <td>${m.forecast_mm ?? ' - '} mm</td>
+      <td>${m.median_mm ?? ' - '} mm</td>
+      <td>${anom}</td>
+      <td><div class="bar"><span style="width:${w}%;background:${TER_COLOR[m.tercile]}"></span><i style="left:${mw}%"></i></div></td>
+      <td style="text-align:left">${t.tercile[m.tercile] ?? m.tercile}</td>
+      <td style="text-align:left">${t.conf[m.confidence] ?? m.confidence}</td>
+      <td>${m.days_covered ?? ' - '}/${m.days_expected ?? ' - '}</td>
+    </tr>`;
+  }).join('');
+  host.innerHTML = `<table><caption class="note" style="caption-side:top;text-align:left;padding-bottom:6px">${t.table}</caption>
+    <thead><tr>${t.cols.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderAdvice(d, t) {
+  const host = $('advice');
+  const lines = d.advisory ?? [];
+  if (!lines.length) { host.innerHTML = `<div class="state">${t.noData}</div>`; return; }
+  host.innerHTML = `<ul class="advice">${lines.map((l) => `<li>${String(l).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</li>`).join('')}</ul>`;
+}
+
+const BOUNDARIES = 'boundaries/';
+let countyWards = [];
+let tercileById = new Map();
+let wardLayer = null;
+
+/** 47 counties, one option each. Kajiado stays the default because it is the pilot. */
+async function loadCounties() {
+  try {
+    const d = await (await fetch('/counties')).json();
+    const sel = $('county');
+    sel.innerHTML = (d.counties ?? []).map((c) => `<option value="${c.slug}">${c.name} (${c.ward_count})</option>`).join('');
+    if ([...sel.options].some((o) => o.value === 'kajiado')) sel.value = 'kajiado';
+  } catch { /* the ward select stays empty and load() shows the error state */ }
+}
+
+/**
+ * County choropleth: one /county-outlook call gives every ward in the county a tercile, so the map
+ * is coloured from a single seasonal request rather than one request per ward. Wards whose own ERA5
+ * cell has not been built yet borrow the nearest cell and say so in the popup and table note.
+ */
+async function loadCounty() {
+  const t = T[lang];
+  const slug = $('county').value;
+  if (!slug) return;
+  $('map-note').textContent = t.loading;
+  try {
+    const [outlook, wards] = await Promise.all([
+      (await fetch(`/county-outlook?county=${encodeURIComponent(slug)}`)).json(),
+      (await fetch(`/wards?county=${encodeURIComponent(slug)}`)).json(),
+    ]);
+    countyWards = outlook.wards ?? [];
+    tercileById = new Map(countyWards.map((w) => [w.id, w]));
+    const sel = $('ward');
+    const prev = sel.value;
+    sel.innerHTML = (wards.wards ?? [])
+      .map((w) => `<option value="${w.slug}">${w.name} - ${w.sub_county}</option>`)
+      .join('');
+    if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
+    await drawCounty(slug, t, wards.county ?? slug);
+  } catch (err) {
+    $('map-note').textContent = `${t.err} ${String(err.message)}`;
+  }
+}
+
+async function drawCounty(slug, t, countyName) {
+  let fc = null;
+  try {
+    const res = await fetch(`${BOUNDARIES}${slug}-wards.geojson`);
+    if (res.ok) fc = await res.json();
+  } catch {
+    fc = null;
+  }
+
+  if (!fc) {
+    $('legend').hidden = true;
+    $('ward-attrib').hidden = true;
+    $('map-note').textContent = t.mapMissing;
+    return;
+  }
+
+  if (!map) {
+    map = L.map('map', { scrollWheelZoom: false }).setView([0.2, 37.9], 7);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors',
+    }).addTo(map);
+  }
+  if (wardLayer) {
+    map.removeLayer(wardLayer);
+    wardLayer = null;
+  }
+
+  wardLayer = L.geoJSON(fc, {
+    style: (feature) => wardStyle(feature),
+    onEachFeature: (feature, layer) => {
+      const w = tercileById.get(feature?.properties?.id);
+      layer.bindPopup(popupFor(feature?.properties, w, t));
+      layer.on('click', () => {
+        if (!w) return;
+        $('ward').value = w.slug;
+        load();
+      });
+    },
+  }).addTo(map);
+  map.fitBounds(wardLayer.getBounds(), { padding: [10, 10] });
+
+  renderLegend(t, true);
+  $('map-note').textContent = t.mapNoteCounty(countyName, countyWards.length);
+  $('ward-attrib').textContent = `${t.wardAttrib} ${fc.properties?.attribution ?? ''}`.trim();
+  $('ward-attrib').hidden = false;
+}
+
+function wardStyle(feature) {
+  const w = tercileById.get(feature?.properties?.id);
+  const selected = Boolean(w) && w.slug === $('ward').value;
+  return {
+    color: selected ? '#16181a' : '#8d8880',
+    weight: selected ? 2.5 : 1,
+    fillColor: TER_COLOR[w?.tercile ?? 'unknown'] ?? TER_COLOR.unknown,
+    fillOpacity: w ? 0.72 : 0.25,
+  };
+}
+
+function popupFor(props, w, t) {
+  const name = props?.ward ?? '';
+  if (!w) return `${name}<br><strong>${t.noWard}</strong>`;
+  const extra = w.cell_source === 'nearest' ? `<br>${t.nearestCell(w.cell_distance_km)}` : '';
+  return `${name}<br><strong>${t.tercile[w.tercile] ?? w.tercile}</strong><br>${t.conf[w.confidence] ?? w.confidence}${extra}`;
+}
+
+function renderLegend(t, hasWards) {
+  const legend = $('legend');
+  if (!hasWards) {
+    legend.hidden = true;
+    return;
+  }
+  legend.hidden = false;
+  legend.innerHTML =
+    ['above', 'near', 'below']
+      .map((k) => `<span><i style="background:${TER_COLOR[k]}"></i>${t.mapLegend[k]}</span>`)
+      .join('') + `<span><i style="background:#d9d5cc"></i>${t.mapLegend.noData}</span>`;
+}
+
+function placeMarker(site, t) {
+  if (!map || site.latitude == null || site.longitude == null) return;
+  const latlng = [site.latitude, site.longitude];
+  if (!marker) {
+    marker = L.marker(latlng).addTo(map).bindPopup(site.name);
+  } else {
+    marker.setLatLng(latlng);
+    marker.setPopupContent(site.name);
+  }
+  $('map-note').textContent = t.mapNote(site, site.elevation_m ?? '?', site.annual?.water_balance_pct ?? '?');
+}
+
+async function load() {
+  const t = T[lang];
+  applyStrings(t);
+  $('now').innerHTML = `<div class="state">${t.loading}</div>`;
+  $('advice').innerHTML = `<div class="state">${t.loading}</div>`;
+  $('table').innerHTML = `<div class="state">${t.loading}</div>`;
+
+  const ward = $('ward').value;
+  if (!ward) {
+    $('now').innerHTML = `<div class="state">${t.noWard}</div>`;
+    $('advice').innerHTML = '';
+    $('table').innerHTML = '';
+    return;
+  }
+
+  const q = new URLSearchParams({ ward, lang, irrigation: $('irr').checked });
+  try {
+    const res = await fetch(`/advisory?${q}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+    const f = await (await fetch(`/forecast?${q}`)).json();
+    const siteData = f.site && typeof f.site === 'object' ? f.site : null;
+    renderNow(d, t);
+    renderTable(d.outlook, t);
+    renderAdvice(d, t);
+    if (siteData) placeMarker(siteData, t);
+    if (wardLayer) wardLayer.setStyle(wardStyle);
+    $('table-note').textContent =
+      siteData?.cell?.source === 'nearest' ? t.nearestCell(siteData.cell.distance_km) : '';
+  } catch (err) {
+    const msg = `${t.err} <code>${String(err.message)}</code>`;
+    $('now').innerHTML = `<div class="state err">${msg}</div>`;
+    $('advice').innerHTML = '';
+    $('table').innerHTML = '';
+  }
+}
+
+async function refresh() {
+  await loadCounty();
+  await load();
+}
+
+for (const id of ['sw', 'en']) {
+  $(id).addEventListener('click', () => {
+    lang = id;
+    $('sw').setAttribute('aria-pressed', String(lang === 'sw'));
+    $('en').setAttribute('aria-pressed', String(lang === 'en'));
+    refresh();
+  });
+}
+$('county').addEventListener('change', refresh);
+$('ward').addEventListener('change', load);
+$('irr').addEventListener('change', load);
+
+loadCounties().then(refresh);
+</script>
+
+<script>
+/*
+ * Precise point lookup and kitchen garden advisory.
+ *
+ * Kept in its own block so the ward dashboard above stays untouched. It reads the
+ * shared `lang` binding rather than duplicating language state, and re-renders
+ * when either language button is pressed.
+ *
+ * Container depths and harvest windows come from the API with
+ * data_status: "unverified_draft". That label is rendered every time on purpose:
+ * these are standard horticultural ranges, not Kenyan trial data.
+ */
+const PT = {
+  sw: {
+    h: 'Tafuta mahali husika',
+    geo: 'Tumia GPS yangu',
+    lookup: 'Tafuta',
+    kitchenBtn: 'Ushauri wa bustani ya jikoni',
+    lat: 'Latitudo', lon: 'Longitudo',
+    aspect: 'Jua mahali pako', water: 'Chanzo cha maji', tercile: 'Hali ya mvua',
+    aspects: { unknown: 'Sijui', full_sun: 'Jua kila siku', morning_sun: 'Jua asubuhi', afternoon_shade: 'Kivuli jioni', shaded: 'Kivuli sana' },
+    waters: { unknown: 'Sijui', tap: 'Mfereji/bomba', rainwater: 'Mvua', purchased: 'Maji ya kununua' },
+    terciles: { near: 'Kawaida', below: 'Chini ya kawaida', above: 'Juu ya kawaida' },
+    geoUnsupported: 'Kifaa hakiwezi kutoa GPS. Andika latitudo na longitudo wewe mwenyewe.',
+    geoDenied: 'Ruhusa ya GPS imekataliwa. Andika latitudo na longitudo wewe mwenyewe.',
+    geoWorking: 'Inatafuta GPS…',
+    needCoords: 'Tafadhali weka latitudo na longitudo.',
+    loading: 'Inapakia…',
+    found: (l) => l.exact
+      ? `Umo ndani ya kata ya ${l.ward}, ${l.sub_county}, kaunti ya ${l.county}.`
+      : `Hakuna kata iliyopatikana kwa nukta hii. Kata ya karibu ni ${l.ward} (${l.county}), umbali wa kilomita ${l.distance_to_nearest_ward_centroid_km} kutoka kitovu chake.`,
+    elevation: (m) => (m == null ? '' : ` Mwinuko: mita ${m}.`),
+    et0: (e) => (e == null ? '' : ` Evapotranspiration ya leo (ET0): milimita ${e}.`),
+    kitchenH: 'Bustani ya jikoni',
+    watering: 'Mwongozo wa kumwagilia',
+    crops: 'Mimea inayofaa vyomboni',
+    unsuitable: 'Haifai vyomboni',
+    warnings: 'Tahadhari',
+    depth: 'kina', litres: 'lita', days: 'siku', spacing: 'nafasi',
+    draftNote: 'Vipimo vya vyombo ni makadirio ya kawaida ya kilimo, si data ya majaribio ya Kenya. Thibitisha na afisa kilimo wa kaunti kabla ya kutegemea kwa biashara.',
+    err: 'Imeshindikana.',
+  },
+  en: {
+    h: 'Find an exact location',
+    geo: 'Use my GPS',
+    lookup: 'Look up',
+    kitchenBtn: 'Kitchen garden advice',
+    lat: 'Latitude', lon: 'Longitude',
+    aspect: 'Sun at your site', water: 'Water source', tercile: 'Rain outlook',
+    aspects: { unknown: 'Unknown', full_sun: 'Full sun', morning_sun: 'Morning sun', afternoon_shade: 'Afternoon shade', shaded: 'Heavily shaded' },
+    waters: { unknown: 'Unknown', tap: 'Tap or pipe', rainwater: 'Rainwater', purchased: 'Purchased water' },
+    terciles: { near: 'Near normal', below: 'Below normal', above: 'Above normal' },
+    geoUnsupported: 'This device cannot provide GPS. Enter latitude and longitude yourself.',
+    geoDenied: 'GPS permission was denied. Enter latitude and longitude yourself.',
+    geoWorking: 'Locating…',
+    needCoords: 'Please enter a latitude and longitude.',
+    loading: 'Loading…',
+    found: (l) => l.exact
+      ? `Inside ${l.ward} ward, ${l.sub_county}, ${l.county} County.`
+      : `No ward polygon contains this point. Nearest ward is ${l.ward} (${l.county}), ${l.distance_to_nearest_ward_centroid_km} km from its centroid.`,
+    elevation: (m) => (m == null ? '' : ` Elevation: ${m} m.`),
+    et0: (e) => (e == null ? '' : ` Today's evapotranspiration (ET0): ${e} mm.`),
+    kitchenH: 'Kitchen garden',
+    watering: 'Watering guidance',
+    crops: 'Crops that work in containers',
+    unsuitable: 'Not suited to containers',
+    warnings: 'Warnings',
+    depth: 'depth', litres: 'litres', days: 'days', spacing: 'spacing',
+    draftNote: 'Container measurements are standard horticultural ranges, not Kenyan trial data. Confirm with a county extension officer before relying on them commercially.',
+    err: 'Failed.',
+  },
+};
+
+const pt = () => PT[lang] ?? PT.sw;
+
+function ptLabels() {
+  const t = pt();
+  $('lbl-point-h').textContent = t.h;
+  $('geolocate').textContent = t.geo;
+  $('plookup').textContent = t.lookup;
+  $('pkitchen').textContent = t.kitchenBtn;
+  $('lbl-plat').textContent = t.lat;
+  $('lbl-plon').textContent = t.lon;
+  $('lbl-paspect').textContent = t.aspect;
+  $('lbl-pwater').textContent = t.water;
+  $('lbl-pter').textContent = t.tercile;
+  for (const [sel, dict] of [['paspect', t.aspects], ['pwater', t.waters], ['pter', t.terciles]]) {
+    for (const opt of $(sel).options) if (dict[opt.value]) opt.textContent = dict[opt.value];
+  }
+  if (lastPoint) renderPoint(lastPoint);
+  if (lastKitchen) renderKitchen(lastKitchen);
+}
+
+let lastPoint = null;
+let lastKitchen = null;
+
+function renderPoint(d) {
+  const t = pt();
+  const l = d.exact === undefined ? d : d;
+  $('point-status').textContent =
+    t.found(l) + t.elevation(d.elevation_m) + t.et0(d.et0_today_mm);
+  $('point-result').innerHTML = '';
+}
+
+function renderKitchen(d) {
+  const t = pt();
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const rows = d.recommended.map((r) => `
+    <li><strong>${esc(r.name)}</strong> &middot; ${t.depth} ${r.min_depth_cm} cm &middot; ${r.min_volume_litres} ${t.lires}
+      &middot; ${r.days_to_first_harvest.join('-')} ${t.days} &middot; ${t.spacing} ${r.spacing_cm} cm
+      ${r.support_needed ? ' &middot; <em>staking</em>' : ''}
+      <br /><span class="note">${esc(r.notes)}</span></li>`).join('');
+  const unsuit = d.unsuitable.map((u) => esc(u.name)).join(', ');
+  const warns = d.warnings.map((w) => `<li>${esc(w.detail)}</li>`).join('') || `<li>${esc('-')}</li>`;
+  $('point-result').innerHTML = `
+    <h3>${esc(t.kitchenH)}</h3>
+    <p><strong>${esc(t.watering)}:</strong> ${esc(d.watering.detail)}</p>
+    <p><strong>${esc(t.crops)}:</strong></p>
+    <ul>${rows || '<li>-</li>'}</ul>
+    <p><strong>${esc(t.unsuitable)}:</strong> ${unsuit || '-'}</p>
+    <p><strong>${esc(t.warnings)}:</strong></p>
+    <ul>${warns}</ul>
+    <p class="warn">${esc(d.data_status === 'unverified_draft' ? t.draftNote : d.caveat)}</p>`;
+}
+
+async function doLookup() {
+  const t = pt();
+  const lat = $('plat').value.trim();
+  const lon = $('plon').value.trim();
+  if (!lat || !lon) {
+    $('point-status').textContent = t.needCoords;
+    return;
+  }
+  $('point-status').textContent = t.loading;
+  $('point-result').innerHTML = '';
+  lastKitchen = null;
+  try {
+    const res = await fetch(`/locate?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    lastPoint = await res.json();
+    renderPoint(lastPoint);
+  } catch (err) {
+    $('point-status').textContent = `${t.err} ${String(err.message)}`;
+  }
+}
+
+async function doKitchen() {
+  const t = pt();
+  const lat = $('plat').value.trim();
+  const lon = $('plon').value.trim();
+  if (!lat || !lon) {
+    $('point-status').textContent = t.needCoords;
+    return;
+  }
+  $('point-status').textContent = t.loading;
+  try {
+    const q = new URLSearchParams({
+      lat, lon,
+      aspect: $('paspect').value,
+      water: $('pwater').value,
+      tercile: $('pter').value,
+      lang,
+    });
+    const res = await fetch(`/kitchen?${q}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    lastKitchen = await res.json();
+    lastPoint = lastKitchen.location ?? lastPoint;
+    renderKitchen(lastKitchen);
+  } catch (err) {
+    $('point-status').textContent = `${t.err} ${String(err.message)}`;
+  }
+}
+
+function doGeolocate() {
+  const t = pt();
+  if (!navigator.geolocation) {
+    $('point-status').textContent = t.geoUnsupported;
+    return;
+  }
+  $('point-status').textContent = t.geoWorking;
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      $('plat').value = pos.coords.latitude.toFixed(5);
+      $('plon').value = pos.coords.longitude.toFixed(5);
+      doLookup();
+    },
+    () => {
+      $('point-status').textContent = t.geoDenied;
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+  );
+}
+
+$('geolocate').addEventListener('click', doGeolocate);
+$('plookup').addEventListener('click', doLookup);
+$('pkitchen').addEventListener('click', doKitchen);
+for (const id of ['sw', 'en']) $(id).addEventListener('click', ptLabels);
+ptLabels();
+</script>
+</body>
+</html>

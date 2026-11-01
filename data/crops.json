@@ -1,0 +1,171 @@
+{
+  "_provenance": {
+    "county_crop_list": "Kajiado County official crop list via kajiado.go.ke, as recorded in WHAT-GROWS-HERE-KAJIADO-NORTH.md",
+    "maturity_windows": "FARM-PLAN-KAJIADO-NORTH.md section 2, short-cycle rainfed-tolerant list",
+    "extension_guidance": "Night Opunga, Sub-County Agricultural Officer Kajiado North, public statement 2026-10-18 (seedfarm.co.ke)",
+    "note": "Strawberry and raspberry are NOT on the Kajiado County list and are excluded. They require grow bags plus greenhouse plus reliable water."
+  },
+  "crops": [
+    {
+      "id": "cowpea",
+      "en": "Cowpea",
+      "sw": "Kunde",
+      "maturity_days": [60, 70],
+      "water_need": "low",
+      "drought_tolerance": "high",
+      "rainfed_ok": true,
+      "market": "local, ready",
+      "county_listed": true,
+      "fodder_value": true
+    },
+    {
+      "id": "greengram",
+      "en": "Green gram",
+      "sw": "Ndengu",
+      "maturity_days": [60, 70],
+      "water_need": "low",
+      "drought_tolerance": "high",
+      "rainfed_ok": true,
+      "market": "local and national, ready",
+      "county_listed": true,
+      "fodder_value": false
+    },
+    {
+      "id": "pigeonpea",
+      "en": "Pigeon pea",
+      "sw": "Mbaazi",
+      "maturity_days": [120, 180],
+      "water_need": "low",
+      "drought_tolerance": "very_high",
+      "rainfed_ok": true,
+      "market": "export and local",
+      "county_listed": false,
+      "fodder_value": true
+    },
+    {
+      "id": "dolichos",
+      "en": "Dolichos",
+      "sw": "Njehi",
+      "maturity_days": [90, 120],
+      "water_need": "medium",
+      "drought_tolerance": "medium",
+      "rainfed_ok": true,
+      "market": "local, strong Nairobi demand",
+      "county_listed": false,
+      "fodder_value": false
+    },
+    {
+      "id": "amaranth",
+      "en": "Amaranth",
+      "sw": "Terere",
+      "maturity_days": [30, 45],
+      "water_need": "medium",
+      "drought_tolerance": "medium",
+      "rainfed_ok": true,
+      "market": "local, ready",
+      "county_listed": true,
+      "cut_and_come_again": true,
+      "extension_recommended": true
+    },
+    {
+      "id": "sorghum",
+      "en": "Sorghum",
+      "sw": "Mtama",
+      "maturity_days": [90, 120],
+      "water_need": "low",
+      "drought_tolerance": "very_high",
+      "rainfed_ok": true,
+      "market": "local, brewing and flour",
+      "county_listed": true,
+      "fodder_value": true
+    },
+    {
+      "id": "millet",
+      "en": "Finger millet",
+      "sw": "Wimbi",
+      "maturity_days": [90, 120],
+      "water_need": "low",
+      "drought_tolerance": "high",
+      "rainfed_ok": true,
+      "market": "local, flour",
+      "county_listed": true,
+      "fodder_value": false
+    },
+    {
+      "id": "cassava",
+      "en": "Cassava",
+      "sw": "Muhogo",
+      "maturity_days": [240, 360],
+      "water_need": "low",
+      "drought_tolerance": "very_high",
+      "rainfed_ok": true,
+      "market": "local, food security buffer",
+      "county_listed": true,
+      "fodder_value": false
+    },
+    {
+      "id": "sweetpotato",
+      "en": "Sweet potato",
+      "sw": "Ngwaci",
+      "maturity_days": [90, 150],
+      "water_need": "medium",
+      "drought_tolerance": "medium",
+      "rainfed_ok": true,
+      "market": "local, ready",
+      "county_listed": true,
+      "fodder_value": true
+    },
+    {
+      "id": "kales",
+      "en": "Kales",
+      "sw": "Sukuma wiki",
+      "maturity_days": [45, 60],
+      "water_need": "high",
+      "drought_tolerance": "low",
+      "rainfed_ok": false,
+      "market": "local, ready",
+      "county_listed": true,
+      "cut_and_come_again": true,
+      "extension_recommended": true,
+      "irrigation_required": true
+    },
+    {
+      "id": "tomato",
+      "en": "Tomato",
+      "sw": "Nyanya",
+      "maturity_days": [70, 90],
+      "water_need": "high",
+      "drought_tolerance": "low",
+      "rainfed_ok": false,
+      "market": "local, ready and high value",
+      "county_listed": true,
+      "extension_recommended": true,
+      "irrigation_required": true
+    },
+    {
+      "id": "maize",
+      "en": "Maize",
+      "sw": "Mahindi",
+      "maturity_days": [120, 180],
+      "water_need": "high",
+      "drought_tolerance": "low",
+      "rainfed_ok": false,
+      "market": "national staple",
+      "county_listed": true,
+      "risk_note": "Rainfed maize is a gamble at this site: annual rainfall is 44 percent of crop water demand and falls in two bursts with a hard dry season between."
+    },
+    {
+      "id": "boma_rhodes",
+      "en": "Boma Rhodes grass",
+      "sw": "Nyasi ya hay",
+      "maturity_days": [90, 120],
+      "water_need": "low",
+      "drought_tolerance": "high",
+      "rainfed_ok": true,
+      "market": "hay, strong dairy demand",
+      "county_listed": false,
+      "fodder_value": true,
+      "purpose": "fodder"
+    }
+  ]
+}

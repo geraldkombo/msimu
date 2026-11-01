@@ -1,0 +1,960 @@
+{
+  "event": {
+    "location": "-1.4275, 36.6865",
+    "county": null,
+    "ward": null,
+    "requested": {
+      "latitude": -1.4275,
+      "longitude": 36.6865
+    },
+    "grid_point": {
+      "latitude": -1.5,
+      "longitude": 36.75,
+      "elevation_m": 1842
+    },
+    "window": {
+      "start": "2026-10-30",
+      "end": "2026-10-31",
+      "days": [
+        "2026-10-30",
+        "2026-10-31"
+      ]
+    },
+    "threshold_mm": 1,
+    "lead_times_requested": 7,
+    "generated": "2026-11-01T05:58:25.068Z"
+  },
+  "reference": {
+    "source": "Open-Meteo forecast API, daily precipitation_sum (best_match analysis)",
+    "snapped": {
+      "latitude": -1.4411248,
+      "longitude": 36.669304,
+      "elevation_m": 1842
+    },
+    "daily_mm": {
+      "2026-10-30": 7,
+      "2026-10-31": 5.6
+    },
+    "window_total_mm": 12.6,
+    "caveat": "Reference \"observed\" series is the Open-Meteo best_match analysis blend, not a rain gauge. Over data-sparse regions this is a model analysis constrained by observations. All categorical scores depend on the stated daily threshold."
+  },
+  "leads": [
+    {
+      "lead_days": 0,
+      "hours_before_valid_time": 0,
+      "observed_mm": 12.6,
+      "any_data": true,
+      "models": {
+        "ecmwf_ifs025": {
+          "label": "ECMWF IFS 0.25",
+          "available": true,
+          "forecast_mm": [
+            5.9,
+            7.4
+          ],
+          "window_total_mm": 13.3,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 0.35,
+            "mae_mm": 1.45
+          }
+        },
+        "gfs_seamless": {
+          "label": "NOAA GFS",
+          "available": true,
+          "forecast_mm": [
+            11.5,
+            17.4
+          ],
+          "window_total_mm": 28.9,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 8.15,
+            "mae_mm": 8.15
+          }
+        },
+        "icon_seamless": {
+          "label": "DWD ICON",
+          "available": true,
+          "forecast_mm": [
+            1.3,
+            5.5
+          ],
+          "window_total_mm": 6.8,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -2.9,
+            "mae_mm": 2.9
+          }
+        },
+        "meteofrance_seamless": {
+          "label": "MeteoFrance",
+          "available": true,
+          "forecast_mm": [
+            0.5,
+            11.8
+          ],
+          "window_total_mm": 12.3,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 1,
+            "false_alarms": 0,
+            "misses": 1,
+            "correct_negatives": 0,
+            "pod": 0.5,
+            "far": 0,
+            "csi": 0.5,
+            "hss": 0,
+            "bias_mm": -0.15,
+            "mae_mm": 6.35
+          }
+        },
+        "ukmo_seamless": {
+          "label": "UKMO",
+          "available": true,
+          "forecast_mm": [
+            1.8,
+            9.2
+          ],
+          "window_total_mm": 11,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -0.8,
+            "mae_mm": 4.4
+          }
+        }
+      }
+    },
+    {
+      "lead_days": 1,
+      "hours_before_valid_time": 24,
+      "observed_mm": 12.6,
+      "any_data": true,
+      "models": {
+        "ecmwf_ifs025": {
+          "label": "ECMWF IFS 0.25",
+          "available": true,
+          "forecast_mm": [
+            3.6,
+            9.4
+          ],
+          "window_total_mm": 13,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 0.2,
+            "mae_mm": 3.6
+          }
+        },
+        "gfs_seamless": {
+          "label": "NOAA GFS",
+          "available": true,
+          "forecast_mm": [
+            13.6,
+            3.7
+          ],
+          "window_total_mm": 17.3,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 2.35,
+            "mae_mm": 4.25
+          }
+        },
+        "icon_seamless": {
+          "label": "DWD ICON",
+          "available": true,
+          "forecast_mm": [
+            0.6,
+            2.4
+          ],
+          "window_total_mm": 3,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 1,
+            "false_alarms": 0,
+            "misses": 1,
+            "correct_negatives": 0,
+            "pod": 0.5,
+            "far": 0,
+            "csi": 0.5,
+            "hss": 0,
+            "bias_mm": -4.8,
+            "mae_mm": 4.8
+          }
+        },
+        "meteofrance_seamless": {
+          "label": "MeteoFrance",
+          "available": true,
+          "forecast_mm": [
+            0.2,
+            2.1
+          ],
+          "window_total_mm": 2.3,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 1,
+            "false_alarms": 0,
+            "misses": 1,
+            "correct_negatives": 0,
+            "pod": 0.5,
+            "far": 0,
+            "csi": 0.5,
+            "hss": 0,
+            "bias_mm": -5.15,
+            "mae_mm": 5.15
+          }
+        },
+        "ukmo_seamless": {
+          "label": "UKMO",
+          "available": true,
+          "forecast_mm": [
+            3.4,
+            6.1
+          ],
+          "window_total_mm": 9.5,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -1.55,
+            "mae_mm": 2.05
+          }
+        }
+      }
+    },
+    {
+      "lead_days": 2,
+      "hours_before_valid_time": 48,
+      "observed_mm": 12.6,
+      "any_data": true,
+      "models": {
+        "ecmwf_ifs025": {
+          "label": "ECMWF IFS 0.25",
+          "available": true,
+          "forecast_mm": [
+            6.9,
+            11.3
+          ],
+          "window_total_mm": 18.2,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 2.8,
+            "mae_mm": 2.9
+          }
+        },
+        "gfs_seamless": {
+          "label": "NOAA GFS",
+          "available": true,
+          "forecast_mm": [
+            3.2,
+            4.6
+          ],
+          "window_total_mm": 7.8,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -2.4,
+            "mae_mm": 2.4
+          }
+        },
+        "icon_seamless": {
+          "label": "DWD ICON",
+          "available": true,
+          "forecast_mm": [
+            0.4,
+            3.3
+          ],
+          "window_total_mm": 3.7,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 1,
+            "false_alarms": 0,
+            "misses": 1,
+            "correct_negatives": 0,
+            "pod": 0.5,
+            "far": 0,
+            "csi": 0.5,
+            "hss": 0,
+            "bias_mm": -4.45,
+            "mae_mm": 4.45
+          }
+        },
+        "meteofrance_seamless": {
+          "label": "MeteoFrance",
+          "available": true,
+          "forecast_mm": [
+            1.9,
+            2.9
+          ],
+          "window_total_mm": 4.8,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -3.9,
+            "mae_mm": 3.9
+          }
+        },
+        "ukmo_seamless": {
+          "label": "UKMO",
+          "available": true,
+          "forecast_mm": [
+            11.8,
+            13.7
+          ],
+          "window_total_mm": 25.5,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 6.45,
+            "mae_mm": 6.45
+          }
+        }
+      }
+    },
+    {
+      "lead_days": 3,
+      "hours_before_valid_time": 72,
+      "observed_mm": 12.6,
+      "any_data": true,
+      "models": {
+        "ecmwf_ifs025": {
+          "label": "ECMWF IFS 0.25",
+          "available": true,
+          "forecast_mm": [
+            9,
+            5.6
+          ],
+          "window_total_mm": 14.6,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 1,
+            "mae_mm": 1
+          }
+        },
+        "gfs_seamless": {
+          "label": "NOAA GFS",
+          "available": true,
+          "forecast_mm": [
+            1.4,
+            5.1
+          ],
+          "window_total_mm": 6.5,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -3.05,
+            "mae_mm": 3.05
+          }
+        },
+        "icon_seamless": {
+          "label": "DWD ICON",
+          "available": true,
+          "forecast_mm": [
+            2,
+            5.4
+          ],
+          "window_total_mm": 7.4,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -2.6,
+            "mae_mm": 2.6
+          }
+        },
+        "meteofrance_seamless": {
+          "label": "MeteoFrance",
+          "available": true,
+          "forecast_mm": [
+            2.3,
+            1.5
+          ],
+          "window_total_mm": 3.8,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -4.4,
+            "mae_mm": 4.4
+          }
+        },
+        "ukmo_seamless": {
+          "label": "UKMO",
+          "available": true,
+          "forecast_mm": [
+            6.3,
+            4.2
+          ],
+          "window_total_mm": 10.5,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -1.05,
+            "mae_mm": 1.05
+          }
+        }
+      }
+    },
+    {
+      "lead_days": 4,
+      "hours_before_valid_time": 96,
+      "observed_mm": 12.6,
+      "any_data": true,
+      "models": {
+        "ecmwf_ifs025": {
+          "label": "ECMWF IFS 0.25",
+          "available": true,
+          "forecast_mm": [
+            6.9,
+            10.7
+          ],
+          "window_total_mm": 17.6,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 2.5,
+            "mae_mm": 2.6
+          }
+        },
+        "gfs_seamless": {
+          "label": "NOAA GFS",
+          "available": true,
+          "forecast_mm": [
+            8.5,
+            4.1
+          ],
+          "window_total_mm": 12.6,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 0,
+            "mae_mm": 1.5
+          }
+        },
+        "icon_seamless": {
+          "label": "DWD ICON",
+          "available": true,
+          "forecast_mm": [
+            4.6,
+            2.8
+          ],
+          "window_total_mm": 7.4,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -2.6,
+            "mae_mm": 2.6
+          }
+        },
+        "meteofrance_seamless": {
+          "label": "MeteoFrance",
+          "available": false
+        },
+        "ukmo_seamless": {
+          "label": "UKMO",
+          "available": true,
+          "forecast_mm": [
+            6.5,
+            1.9
+          ],
+          "window_total_mm": 8.4,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -2.1,
+            "mae_mm": 2.1
+          }
+        }
+      }
+    },
+    {
+      "lead_days": 5,
+      "hours_before_valid_time": 120,
+      "observed_mm": 12.6,
+      "any_data": true,
+      "models": {
+        "ecmwf_ifs025": {
+          "label": "ECMWF IFS 0.25",
+          "available": true,
+          "forecast_mm": [
+            5.5,
+            6.8
+          ],
+          "window_total_mm": 12.3,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -0.15,
+            "mae_mm": 1.35
+          }
+        },
+        "gfs_seamless": {
+          "label": "NOAA GFS",
+          "available": true,
+          "forecast_mm": [
+            9,
+            3.8
+          ],
+          "window_total_mm": 12.8,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 0.1,
+            "mae_mm": 1.9
+          }
+        },
+        "icon_seamless": {
+          "label": "DWD ICON",
+          "available": true,
+          "forecast_mm": [
+            2.1,
+            3.9
+          ],
+          "window_total_mm": 6,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -3.3,
+            "mae_mm": 3.3
+          }
+        },
+        "meteofrance_seamless": {
+          "label": "MeteoFrance",
+          "available": false
+        },
+        "ukmo_seamless": {
+          "label": "UKMO",
+          "available": true,
+          "forecast_mm": [
+            6.2,
+            4.6
+          ],
+          "window_total_mm": 10.8,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -0.9,
+            "mae_mm": 0.9
+          }
+        }
+      }
+    },
+    {
+      "lead_days": 6,
+      "hours_before_valid_time": 144,
+      "observed_mm": 12.6,
+      "any_data": true,
+      "models": {
+        "ecmwf_ifs025": {
+          "label": "ECMWF IFS 0.25",
+          "available": true,
+          "forecast_mm": [
+            6.6,
+            8
+          ],
+          "window_total_mm": 14.6,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 1,
+            "mae_mm": 1.4
+          }
+        },
+        "gfs_seamless": {
+          "label": "NOAA GFS",
+          "available": true,
+          "forecast_mm": [
+            2.5,
+            2.6
+          ],
+          "window_total_mm": 5.1,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -3.75,
+            "mae_mm": 3.75
+          }
+        },
+        "icon_seamless": {
+          "label": "DWD ICON",
+          "available": true,
+          "forecast_mm": [
+            5.7,
+            3.1
+          ],
+          "window_total_mm": 8.8,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -1.9,
+            "mae_mm": 1.9
+          }
+        },
+        "meteofrance_seamless": {
+          "label": "MeteoFrance",
+          "available": false
+        },
+        "ukmo_seamless": {
+          "label": "UKMO",
+          "available": true,
+          "forecast_mm": [
+            2.3,
+            1.3
+          ],
+          "window_total_mm": 3.6,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": -4.5,
+            "mae_mm": 4.5
+          }
+        }
+      }
+    },
+    {
+      "lead_days": 7,
+      "hours_before_valid_time": 168,
+      "observed_mm": 12.6,
+      "any_data": true,
+      "models": {
+        "ecmwf_ifs025": {
+          "label": "ECMWF IFS 0.25",
+          "available": true,
+          "forecast_mm": [
+            5.7,
+            8.4
+          ],
+          "window_total_mm": 14.1,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 2,
+            "false_alarms": 0,
+            "misses": 0,
+            "correct_negatives": 0,
+            "pod": 1,
+            "far": 0,
+            "csi": 1,
+            "hss": null,
+            "bias_mm": 0.75,
+            "mae_mm": 2.05
+          }
+        },
+        "gfs_seamless": {
+          "label": "NOAA GFS",
+          "available": true,
+          "forecast_mm": [
+            2.7,
+            0.2
+          ],
+          "window_total_mm": 2.9,
+          "scores": {
+            "n": 2,
+            "threshold_mm": 1,
+            "hits": 1,
+            "false_alarms": 0,
+            "misses": 1,
+            "correct_negatives": 0,
+            "pod": 0.5,
+            "far": 0,
+            "csi": 0.5,
+            "hss": 0,
+            "bias_mm": -4.85,
+            "mae_mm": 4.85
+          }
+        },
+        "icon_seamless": {
+          "label": "DWD ICON",
+          "available": false
+        },
+        "meteofrance_seamless": {
+          "label": "MeteoFrance",
+          "available": false
+        },
+        "ukmo_seamless": {
+          "label": "UKMO",
+          "available": false
+        }
+      }
+    }
+  ],
+  "sanity": {
+    "lead_offsets_with_data": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "distinct_window_totals": [
+      2.3,
+      2.9,
+      3,
+      3.6,
+      3.7,
+      3.8,
+      4.8,
+      5.1,
+      6,
+      6.5,
+      6.8,
+      7.4,
+      7.8,
+      8.4,
+      8.8,
+      9.5,
+      10.5,
+      10.8,
+      11,
+      12.3,
+      12.6,
+      12.8,
+      13,
+      13.3,
+      14.1,
+      14.6,
+      17.3,
+      17.6,
+      18.2,
+      25.5,
+      28.9
+    ],
+    "note": "lead 0 is the current run, equivalent to the live forecast API"
+  },
+  "caveat": "Reference \"observed\" series is the Open-Meteo best_match analysis blend, not a rain gauge. Over data-sparse regions this is a model analysis constrained by observations. All categorical scores depend on the stated daily threshold."
+}

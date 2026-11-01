@@ -1,0 +1,20 @@
+name = "msimu"
+main = "index.mjs"
+account_id = "fdff06ddff4a96e9709519f406fa7e36"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Static dashboard is served from the same origin as the API, so the page's
+# relative fetch("/advisory") works with no CORS config and no second project.
+#
+# The `binding` line is required, not decoration: /locate does point-in-polygon
+# against the ward GeoJSON, and inside a Worker neither env.ASSETS nor a
+# same-origin fetch() can reach these files unless the binding exists. Without it
+# every lookup silently degrades to the nearest-centroid guess while still
+# returning a plausible ward name.
+[assets]
+directory = "../web"
+binding = "ASSETS"
+
+[observability]
+enabled = true

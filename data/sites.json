@@ -1,0 +1,103 @@
+{
+  "_provenance": {
+    "normals_source": "ERA5 via Open-Meteo Archive API, 2005-2024, computed in FARM-PLAN-KAJIADO-NORTH.md",
+    "elevation_cross_check": "Open-Meteo seasonal API independently returned elevation=1800m on 2026-10-28",
+    "coordinates_source": "DEVICE-LOCATION.md"
+  },
+  "gataka": {
+    "name": "Gataka, Nkaimurunya Ward",
+    "county": "Kajiado",
+    "sub_county": "Kajiado North",
+    "ward": "Nkaimurunya",
+    "latitude": -1.37271746,
+    "longitude": 36.71575633,
+    "elevation_m": 1800,
+    "agro_ecology": "semi-arid to dry sub-humid",
+    "normals_2005_2024": {
+      "rain_mm": {
+        "1": 36,
+        "2": 42,
+        "3": 68,
+        "4": 142,
+        "5": 81,
+        "6": 35,
+        "7": 17,
+        "8": 24,
+        "9": 26,
+        "10": 57,
+        "11": 99,
+        "12": 58
+      },
+      "tmax_c": {
+        "1": 25.5,
+        "2": 26.4,
+        "3": 26.1,
+        "4": 23.9,
+        "5": 22.8,
+        "6": 22,
+        "7": 21.6,
+        "8": 22.3,
+        "9": 24.1,
+        "10": 25,
+        "11": 23.2,
+        "12": 24
+      },
+      "tmin_c": {
+        "1": 14.2,
+        "2": 14.5,
+        "3": 14.9,
+        "4": 15,
+        "5": 14,
+        "6": 12.5,
+        "7": 11.6,
+        "8": 12,
+        "9": 12.7,
+        "10": 14.1,
+        "11": 14.3,
+        "12": 14.1
+      },
+      "et0_mm": {
+        "1": 158,
+        "2": 155,
+        "3": 162,
+        "4": 119,
+        "5": 111,
+        "6": 98,
+        "7": 98,
+        "8": 109,
+        "9": 132,
+        "10": 147,
+        "11": 117,
+        "12": 135
+      }
+    },
+    "annual": {
+      "rain_mm": 684,
+      "et0_mm": 1540,
+      "water_balance_pct": 44
+    },
+    "seasons": {
+      "long_rains": {
+        "months": [
+          3,
+          4,
+          5
+        ],
+        "total_mm": 290,
+        "peak_month": 4
+      },
+      "short_rains": {
+        "months": [
+          10,
+          11,
+          12
+        ],
+        "total_mm": 213,
+        "peak_month": 11
+      },
+      "dry_jun_sep_mm": 103,
+      "dry_jan_feb_mm": 78
+    },
+    "frost_risk": false
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "msimu",
+  "version": "0.1.0",
+  "description": "Last-mile seasonal climate advisories for ASAL smallholders and agro-pastoralists. Forecast in, farming decision out, delivered on a basic phone.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\"",
+    "advisory": "node src/cli.mjs",
+    "verify": "node src/cli.mjs --site gataka --json",
+    "verify-bands": "node scripts/verify-terciles.mjs",
+    "wards": "node scripts/fetch-boundaries.mjs",
+    "normals": "node scripts/build-normals.mjs",
+    "check-wards": "node scripts/check-wards.mjs",
+    "dedash": "node scripts/dedash.mjs --write",
+    "dedash:check": "node scripts/dedash.mjs --check",
+    "smoke": "node scripts/smoke-worker.mjs",
+    "probe": "node scripts/probe-local.mjs",
+    "probe:live": "node scripts/probe-local.mjs --base https://msimu.shikunyi.workers.dev",
+    "deploy:dry": "wrangler deploy --config worker/wrangler.toml --dry-run",
+    "deploy": "wrangler deploy --config worker/wrangler.toml",
+    "serve": "node scripts/serve-local.mjs",
+    "dev": "wrangler dev worker/index.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "keywords": [
+    "climate-services",
+    "seasonal-forecast",
+    "ussd",
+    "kenya",
+    "igad",
+    "asal",
+    "food-security"
+  ]
+}

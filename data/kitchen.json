@@ -1,0 +1,92 @@
+{
+  "_provenance": {
+    "status": "unverified_draft",
+    "warning": "Container depths, volumes and first-harvest timings below are standard horticultural ranges, NOT measured Kenyan trial data. They are shipped so the kitchen-garden feature works, and each one must be confirmed against KALRO, county extension officers or a published container-gardening trial before it is quoted as fact in an article or shown to a farmer without a caveat. Do not treat these numbers as verified.",
+    "crop_ids_from": "data/crops.json",
+    "built_at": "2026-10-31",
+    "cost": "$0, no API key"
+  },
+  "containers": [
+    {
+      "crop_id": "amaranth",
+      "min_depth_cm": 20,
+      "min_volume_litres": 10,
+      "days_to_first_harvest": [30, 40],
+      "harvest_style": "cut_and_come_again",
+      "support_needed": false,
+      "shade_tolerance": "part_shade_ok",
+      "spacing_cm": 10,
+      "notes_en": "Fastest return of any container leafy green. Sow densely, thin as you harvest.",
+      "notes_sw": "Mchicha hukua haraka kuliko mboga nyingine za majani. Panda kwa karibu, una kadiri unavyovuna."
+    },
+    {
+      "crop_id": "kales",
+      "min_depth_cm": 30,
+      "min_volume_litres": 20,
+      "days_to_first_harvest": [50, 70],
+      "harvest_style": "outer_leaves",
+      "support_needed": false,
+      "shade_tolerance": "part_shade_ok",
+      "spacing_cm": 30,
+      "notes_en": "One plant feeds a household for months if outer leaves are picked and the crown is left.",
+      "notes_sw": "Mmea mmoja unaweza kutosha familia kwa miezi ukichukua majani ya nje na kuacha kiini."
+    },
+    {
+      "crop_id": "tomato",
+      "min_depth_cm": 35,
+      "min_volume_litres": 25,
+      "days_to_first_harvest": [70, 90],
+      "harvest_style": "single_harvest_window",
+      "support_needed": true,
+      "shade_tolerance": "full_sun_only",
+      "spacing_cm": 45,
+      "notes_en": "Needs full sun, staking and consistent water. Fruit splits if watering swings between dry and flooded.",
+      "notes_sw": "Inahitaji jua kamili, kufungwa kamba na maji ya mara kwa mara. Matunda yupasuka maji yakibadilika sana."
+    },
+    {
+      "crop_id": "cowpea",
+      "min_depth_cm": 25,
+      "min_volume_litres": 15,
+      "days_to_first_harvest": [60, 70],
+      "harvest_style": "repeated_picking",
+      "support_needed": false,
+      "shade_tolerance": "full_sun_only",
+      "spacing_cm": 20,
+      "notes_en": "Tolerates dry conditions and poor media better than most. Leaves are also edible.",
+      "notes_sw": "Inastahimili ukame na udongo mbaya kuliko nyingi. Majani pia huliwa."
+    },
+    {
+      "crop_id": "dolichos",
+      "min_depth_cm": 30,
+      "min_volume_litres": 20,
+      "days_to_first_harvest": [70, 90],
+      "harvest_style": "repeated_picking",
+      "support_needed": true,
+      "shade_tolerance": "full_sun_only",
+      "spacing_cm": 30,
+      "notes_en": "A climber. Give it a balcony railing or string and it will crop over a long window.",
+      "notes_sw": "Ni mpanda juu. Ipe kizingiti cha roshani au kamba itazaa kwa muda mrefu."
+    },
+    {
+      "crop_id": "sweetpotato",
+      "min_depth_cm": 30,
+      "min_volume_litres": 30,
+      "days_to_first_harvest": [30, 45],
+      "harvest_style": "leaves_then_tubers",
+      "support_needed": false,
+      "shade_tolerance": "part_shade_ok",
+      "spacing_cm": 30,
+      "notes_en": "Grown in a container for leaves from about a month; tubers need a deep sack and 4 to 5 months.",
+      "notes_sw": "Hupandwa kwenye chombo kwa ajili ya majani kuanzia mwezi mmoja; viazi vinahitaji gunia kirefu na miezi 4 hadi 5."
+    }
+  ],
+  "unsuitable_in_containers": [
+    { "crop_id": "maize", "reason": "root_depth_and_pollination" },
+    { "crop_id": "sorghum", "reason": "height_and_root_depth" },
+    { "crop_id": "millet", "reason": "broadcast_field_crop" },
+    { "crop_id": "cassava", "reason": "needs_deep_soil_long_season" },
+    { "crop_id": "pigeonpea", "reason": "woody_shrub_too_large" },
+    { "crop_id": "greengram", "reason": "field_crop_low_container_value" },
+    { "crop_id": "boma_rhodes", "reason": "fodder_grass_needs_area" }
+  ]
+}

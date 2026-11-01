@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Verify zero dependencies
+        run: |
+          if [ -f package-lock.json ] || [ -d node_modules ]; then
+            echo "msimu must stay dependency-free"; exit 1
+          fi
+          node -e "const p=require('./package.json'); const d={...p.dependencies,...p.devDependencies}; if(Object.keys(d).length){console.error('dependencies found:',d);process.exit(1)} console.log('no dependencies: OK')"
+
+      - name: Style guard (no long dashes)
+        run: node scripts/dedash.mjs --check
+
+      - name: Unit tests (offline, no network)
+        run: node --test "tests/*.test.mjs"
+
+      - name: CLI runs against live Open-Meteo APIs
+        run: node src/cli.mjs --site gataka --lang sw
+
+      - name: Country-wide CLI (a ward outside the pilot county, live APIs)
+        run: node src/cli.mjs --ward turkana--kalokol --lang sw
+
+      - name: Worker smoke test (live APIs)
+        run: node scripts/smoke-worker.mjs
+
+      - name: Leave-one-out tercile verification (live ERA5)
+        run: node scripts/verify-terciles.mjs
+
+      - name: Ward boundary asset integrity (offline)
+        run: node scripts/check-wards.mjs
+
+      - name: End-to-end local probe (dashboard + API on one origin)
+        run: node scripts/probe-local.mjs --port 8091
