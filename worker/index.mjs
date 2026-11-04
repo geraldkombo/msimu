@@ -20,23 +20,35 @@ const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const cache = new Map();
 
 /**
- * Roof-material classification from a photo, via the keyless free vision lane
- * (Kilo gateway, no account, no card). Bounded question, bounded answers: the
- * model may only say iron_sheet, tiles, thatch or other, and its verdict is
- * labelled a photo estimate the user confirms by eye. Every failure mode
- * (rate limit, timeout, unparsable answer, next model down) falls through to
- * null, and the route answers 503 so the dashboard tells the user to pick the
- * material themselves. No key, no cost, no secrets.
+ * Roof-material classification from a photo. Bounded question, bounded answers:
+ * the model may only say iron_sheet, tiles, thatch or other, and its verdict is
+ * labelled a photo estimate the user confirms by eye. Every failure mode (rate
+ * limit, timeout, unparsable answer, next model down, next lane down) falls
+ * through, and the route answers 503 so the dashboard tells the user to pick
+ * the material themselves. No key, no cost, no secrets.
+ *
+ * Lane order, decided 4 November 2026 after live probing:
+ * 1. Cloudflare Workers AI free allowance via the AI binding - runs inside the
+ *    Worker itself, no CORS, no third-party gateway, no retirement date. The
+ *    binding wants the raw { image: bytes, prompt } shape; the OpenAI-style
+ *    messages shape can silently return null content for the vision model.
+ *    Llama 3.2 Vision has a one-time Meta licence gate, so the code answers it
+ *    (prompt "agree") once and retries; LLaVA behind it has no gate.
+ * 2. The keyless Kilo gateway lane as the off-platform fallback. Its dots
+ *    model is a thinking model that needs a 1500-token budget or the answer is
+ *    swallowed by hidden reasoning, and it carries a published 2026-12-31
+ *    retirement date; the Nemotron VL free models either reason away small
+ *    budgets or 422 with "media could not be screened", so they sit last.
  */
+const CF_VISION_MODELS = [
+  // json_object is honoured by the Llama vision model and, per the Workers AI
+  // binding's documented behaviour, may come back as an already-parsed object
+  // rather than a string - both shapes are handled below. LLaVA gets the plain
+  // prompt because it does not implement response_format.
+  { model: '@cf/meta/llama-3.2-11b-vision-instruct', json: true },
+  { model: '@cf/llava-hf/llava-1.5-7b-hf', json: false },
+];
 const ROOF_VISION_MODELS = [
-  // Free keyless vision lanes, probed live 4 November 2026. The dots model is a
-  // thinking model: it needs a large budget or the answer is swallowed by
-  // hidden reasoning (finish=length, content null), so it gets 1500 tokens and
-  // a retry. The Nemotron VL free lanes sit behind it: they either reason away
-  // small budgets or 422 with "media could not be screened", so they are a
-  // courtesy fallback, not the workhorse. The dots preview lane is published
-  // with a 2026-12-31 retirement date; when it goes, the chain degrades to the
-  // honest 503 and the dashboard's manual material pick.
   { model: 'dots-studio/dots-3-note-preview:free', maxTokens: 1500, tries: 2 },
   { model: 'nvidia/nemotron-3.5-super-vl:free', maxTokens: 900, tries: 1 },
   { model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', maxTokens: 900, tries: 1 },
@@ -45,8 +57,100 @@ const ROOF_MATERIALS = ['iron_sheet', 'tiles', 'thatch', 'other'];
 const ROOF_VISION_PROMPT =
   'Classify the roof in this photo into exactly one material: iron_sheet, tiles, thatch, other. Reply with JSON only, no prose: {"material":"...","confidence":"low|medium|high"}';
 
-async function classifyRoofPhoto(image) {
+function parseRoofVerdict(raw) {
+  const text = String(raw ?? '');
+  let parsed = null;
+  const found = /\{[\s\S]*\}/.exec(text);
+  if (found) {
+    try {
+      parsed = JSON.parse(found[0]);
+    } catch {
+      parsed = null;
+    }
+  }
+  if (!parsed || !ROOF_MATERIALS.includes(parsed?.material)) {
+    const bare = /\b(iron_sheet|tiles|thatch|other)\b/.exec(text);
+    if (bare) parsed = { material: bare[1], confidence: 'low' };
+  }
+  if (!parsed || !ROOF_MATERIALS.includes(parsed?.material)) {
+    // Models answer in natural language more often than in the requested enum:
+    // "corrugated iron sheets", "clay tiles", "grass roof". Map the words, but
+    // only ever to the four allowed answers, and only at low confidence.
+    const nl = [
+      [/\bthatch|makuti|straw roof|grass roof\b/i, 'thatch'],
+      [/\btiles?\b|vigae|clay roof\b/i, 'tiles'],
+      [/iron sheet|corrugated|\bmabati\b|metal roof|tin roof/i, 'iron_sheet'],
+    ];
+    for (const [re, material] of nl) {
+      if (re.test(text)) {
+        parsed = { material, confidence: 'low' };
+        break;
+      }
+    }
+  }
+  if (!parsed || !ROOF_MATERIALS.includes(parsed?.material)) return null;
+  return {
+    material: parsed.material,
+    confidence: ['low', 'medium', 'high'].includes(parsed?.confidence) ? parsed.confidence : 'low',
+  };
+}
+
+function dataUrlToBytes(dataUrl) {
+  const m = /^data:image\/[a-z+.-]+;base64,([\s\S]+)$/i.exec(String(dataUrl ?? ''));
+  if (!m) return null;
+  const bin = atob(m[1].replace(/\s+/g, ''));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+  return [...bytes];
+}
+
+async function workersAiRoofVerdict(env, image, failures) {
+  if (typeof env?.AI?.run !== 'function') {
+    failures.push('workers-ai:no_binding');
+    return null;
+  }
+  const bytes = dataUrlToBytes(image);
+  if (!bytes) {
+    failures.push('workers-ai:bad_image');
+    return null;
+  }
+  for (const { model, json } of CF_VISION_MODELS) {
+    let agreed = false;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        const input = { image: bytes, prompt: ROOF_VISION_PROMPT, max_tokens: 80 };
+        if (json) input.response_format = { type: 'json_object' };
+        const out = await env.AI.run(model, input);
+        const resp = out?.response;
+        // With response_format the binding can hand back an already-parsed
+        // object instead of a string; stringify so one parser sees one shape.
+        const verdict = parseRoofVerdict(resp && typeof resp === 'object' ? JSON.stringify(resp) : resp);
+        if (verdict) return { ...verdict, model, data_status: 'photo_estimate' };
+        failures.push(`${model}:no_verdict`);
+        break;
+      } catch (err) {
+        const msg = String(err?.message ?? err);
+        if (!agreed && /agree|licen[cs]e/i.test(msg) && attempt === 1) {
+          agreed = true;
+          try {
+            await env.AI.run(model, { prompt: 'agree', max_tokens: 8 });
+          } catch {
+            // consent refused at binding level: fall through to the next model
+          }
+          continue;
+        }
+        failures.push(`${model}:${msg.slice(0, 40)}`);
+        break;
+      }
+    }
+  }
+  return null;
+}
+
+async function classifyRoofPhoto(image, env = {}) {
   const failures = [];
+  const cf = await workersAiRoofVerdict(env, image, failures);
+  if (cf) return { result: cf, failures };
   for (const { model, maxTokens, tries } of ROOF_VISION_MODELS) {
     for (let attempt = 1; attempt <= tries; attempt += 1) {
       try {
@@ -76,33 +180,12 @@ async function classifyRoofPhoto(image) {
         const finish = j?.choices?.[0]?.finish_reason ?? 'none';
         let raw = j?.choices?.[0]?.message?.content;
         if (Array.isArray(raw)) raw = raw.map((p) => (typeof p === 'string' ? p : p?.text ?? '')).join('');
-        raw = String(raw ?? '');
-        let parsed = null;
-        const found = /\{[\s\S]*\}/.exec(raw);
-        if (found) {
-          try {
-            parsed = JSON.parse(found[0]);
-          } catch {
-            parsed = null;
-          }
-        }
-        if (!parsed || !ROOF_MATERIALS.includes(parsed?.material)) {
-          const bare = /\b(iron_sheet|tiles|thatch|other)\b/.exec(raw);
-          if (bare) parsed = { material: bare[1], confidence: 'low' };
-        }
-        if (!parsed || !ROOF_MATERIALS.includes(parsed?.material)) {
+        const verdict = parseRoofVerdict(raw);
+        if (!verdict) {
           failures.push(`${model}:no_verdict:${finish}`);
           continue;
         }
-        return {
-          result: {
-            material: parsed.material,
-            confidence: ['low', 'medium', 'high'].includes(parsed?.confidence) ? parsed.confidence : 'low',
-            model,
-            data_status: 'photo_estimate',
-          },
-          failures,
-        };
+        return { result: { ...verdict, model, data_status: 'photo_estimate' }, failures };
       } catch (err) {
         // shed, timeout or garbage: try again or fall through to the next model
         failures.push(`${model}:${String(err?.message ?? err).slice(0, 40)}`);
@@ -658,14 +741,14 @@ export async function handle(request, env = {}) {
       if (!/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=\s]+$/.test(image) || image.length > 2000000) {
         return json({ error: 'send {"image": "data:image/png;base64,..."} of at most about 1.5 MB' }, { status: 400 });
       }
-      const { result, failures } = await classifyRoofPhoto(image);
+      const { result, failures } = await classifyRoofPhoto(image, env);
       if (!result) {
         return json(
           { error: 'photo check unavailable right now; pick the roof material yourself', detail: failures },
           { status: 503 },
         );
       }
-      return json(result);
+      return json({ ...result, ...(failures.length ? { lane_notes: failures } : {}) });
     }
 
     return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/locate', '/forecast', '/advisory', '/kitchen', '/skill', '/food-security', '/photo-roof', '/ussd'] }, { status: 404 });
