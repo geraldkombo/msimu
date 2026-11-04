@@ -282,6 +282,7 @@
       <button id="bfood" type="button">Tengeneza mpango</button>
       <button id="bshare" type="button" hidden>Share this plan</button>
     </div>
+    <p class="note" id="surround-status" style="margin-top:8px"></p>
     <p class="note" id="food-status" style="margin-top:10px"></p>
     <div id="food-result" style="margin-top:10px"></div>
   </section>
@@ -716,6 +717,10 @@ const PT = {
     thatchNote: 'Paa la makuti haliwezi kuvuna maji: mpango utatumia maji ya kununua.',
     tilesNote: 'Vigae na zege vinamwaga mvua kidogo kuliko mabati: ukubwa wa tangi ni makadirio bora.',
     photoBtn: 'Kagua picha ya paa langu', photoWorking: 'Inasoma picha...', photoFail: 'Kikao cha picha hakipatikani sasa - chagua aina ya paa mwenyewe.',
+    ipFallbackNote: 'GPS haipatikani (ndani ya jengo ni kawaida) - nimetumia makadirio ya mji kutoka kwa mtandao wako. Kagua na urekebishe latitudo na longitudo.',
+    surroundWorking: 'Ninaangalia kilichopo karibu nawe kwenye ramani...',
+    surroundSuggested: (d, m) => `Pendekezo kutoka ramani (OpenStreetMap): ${d}${m ? `; paa: ${m}` : ''}. Thibitisha kwa macho, kisha jenga mpango.`,
+    surroundNone: 'Hakuna majengo yaliyochorwa karibu hapa kwenye OpenStreetMap - jaza fomu hii mwenyewe.',
     photoDone: (m, c) => `Picha inaonyesha: ${m} (uhakika: ${c}). Thibitisha kwa macho, kisha jenga mpango upya.`,
     foodVerify: 'Na nani kuthibitisha mpango huu',
     foodNeed: 'Chagua kata au weka latitudo na longitudo kwanza.',
@@ -773,6 +778,10 @@ const PT = {
     thatchNote: 'A thatch roof cannot harvest water: the plan will run on bought water.',
     tilesNote: 'Tiles and rough concrete shed less rain than iron sheet: the tank size is a best case.',
     photoBtn: 'Check my roof photo', photoWorking: 'Reading the photo...', photoFail: 'Photo check unavailable right now - pick the roof material yourself.',
+    ipFallbackNote: 'No GPS fix (common indoors) - used a city-level estimate from your internet connection. Check and correct the coordinates.',
+    surroundWorking: 'Checking what is mapped around this point...',
+    surroundSuggested: (d, m) => `Map suggestion (OpenStreetMap): ${d}${m ? `; roof: ${m}` : ''}. Confirm with your eyes, then build the plan.`,
+    surroundNone: 'Nothing is mapped around this point on OpenStreetMap - fill this form yourself.',
     photoDone: (m, c) => `The photo says: ${m} (confidence: ${c}). Confirm with your eyes, then rebuild the plan.`,
     foodVerify: 'Who to confirm this plan with',
     foodNeed: 'Select a ward or enter latitude and longitude first.',
@@ -904,8 +913,49 @@ async function doLookup() {
     renderPoint(lastPoint);
     foodTarget = 'point';
     if (lastFood) doFood();
+    suggestSurroundings(lastPoint.latitude, lastPoint.longitude);
   } catch (err) {
     $('point-status').textContent = `${t.err} ${String(err.message)}`;
+  }
+}
+
+/**
+ * Ask the map what is built around the point and pre-fill the food form with
+ * it: apartment-heavy blocks suggest "flat", the most common mapped roof
+ * material suggests the roof. Every suggestion stays a map-derived hint the
+ * status line tells the user to confirm, and a point with nothing mapped gets
+ * an honest "nothing is mapped here" instead of a guess.
+ */
+async function suggestSurroundings(lat, lon) {
+  const t = pt();
+  const el = $('surround-status');
+  if (!el || lat == null || lon == null) return;
+  el.textContent = t.surroundWorking;
+  try {
+    const res = await fetch(`/surroundings?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = await res.json();
+    const s = j.suggestion;
+    if (!s || (!s.dwelling && !s.roof_material)) {
+      el.textContent = t.surroundNone;
+      return;
+    }
+    let dwellingLabel = '';
+    let materialLabel = '';
+    if (s.dwelling && $('fdwelling').value !== s.dwelling) {
+      $('fdwelling').value = s.dwelling;
+      $('fdwelling').dispatchEvent(new Event('change'));
+    }
+    if (s.dwelling) dwellingLabel = t.dwellings[s.dwelling] ?? s.dwelling;
+    if (s.roof_material && $('fmat').value !== s.roof_material) {
+      $('fmat').value = s.roof_material;
+      $('fmat').dispatchEvent(new Event('change'));
+    }
+    if (s.roof_material) materialLabel = t.materials[s.roof_material] ?? s.roof_material;
+    el.textContent = t.surroundSuggested(dwellingLabel, materialLabel);
+  } catch {
+    // map services are a courtesy, not a dependency: stay quiet on failure
+    el.textContent = '';
   }
 }
 
@@ -1022,10 +1072,33 @@ async function doFood() {
   }
 }
 
+/**
+ * Fallback when the browser cannot get a GPS fix (denied, unsupported, or no
+ * satellites indoors - the Radisson Blu case): Cloudflare already knows the
+ * approximate city from the request's IP. It is city-level at best, so the
+ * coordinates are filled in, the lookup runs, and the status line says plainly
+ * that this is an estimate to correct by hand.
+ */
+async function ipLocate(afterDenied) {
+  const t = pt();
+  $('point-status').textContent = t.geoWorking;
+  try {
+    const res = await fetch('/ip-location');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = await res.json();
+    $('plat').value = Number(j.latitude).toFixed(5);
+    $('plon').value = Number(j.longitude).toFixed(5);
+    await doLookup();
+    $('point-status').textContent = `${$('point-status').textContent} ${t.ipFallbackNote}`;
+  } catch {
+    $('point-status').textContent = afterDenied ? t.geoDenied : t.geoUnsupported;
+  }
+}
+
 function doGeolocate() {
   const t = pt();
   if (!navigator.geolocation) {
-    $('point-status').textContent = t.geoUnsupported;
+    ipLocate(false);
     return;
   }
   $('point-status').textContent = t.geoWorking;
@@ -1036,7 +1109,7 @@ function doGeolocate() {
       doLookup();
     },
     () => {
-      $('point-status').textContent = t.geoDenied;
+      ipLocate(true);
     },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
   );

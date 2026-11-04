@@ -8,6 +8,7 @@ import { locatePoint, pointSite, workerGeometryLoader } from '../src/point.mjs';
 import { buildKitchenAdvisory } from '../src/kitchen.mjs';
 import { buildFoodSecurityPlan } from '../src/foodsecurity.mjs';
 import { defaultHouseholdPeople } from '../src/households.mjs';
+import { analyzeSurroundings, osmXmlToElements } from '../src/surroundings.mjs';
 import {
   DEFAULT_MODELS,
   rollingWindow,
@@ -478,6 +479,8 @@ export async function handle(request, env = {}) {
           '/kitchen?lat=-1.28496&lon=36.89468&aspect=shaded&water=purchased&lang=en',
           '/skill?lat=-1.4275&lon=36.6865&days=7',
           '/food-security?ward=kajiado--nkaimurunya&roof=30&people=4&lang=en',
+          '/surroundings?lat=-1.286&lon=36.818',
+          '/ip-location',
           'POST /photo-roof',
           'POST /ussd',
         ],
@@ -595,6 +598,121 @@ export async function handle(request, env = {}) {
         ...location,
         et0_today_mm: climate?.et0_today ?? null,
       });
+    }
+
+    /**
+     * IP-based location from Cloudflare's own request metadata: free, keyless,
+     * no external call, and it works indoors where a GPS fix will not. Accuracy
+     * is city-level at best, so the payload says so and the dashboard labels it
+     * as approximate and invites correction.
+     */
+    if (url.pathname === '/ip-location') {
+      const cf = request.cf ?? null;
+      const lat = Number(cf?.latitude);
+      const lon = Number(cf?.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+        return json({ error: 'IP location is unavailable on this request; enter coordinates manually' }, { status: 404 });
+      }
+      return json({
+        latitude: lat,
+        longitude: lon,
+        basis: 'cloudflare_ip',
+        accuracy: 'city_approx',
+        note: 'City-level estimate from your internet connection, not a GPS fix. Check the pin before trusting the plan.',
+      });
+    }
+
+    /**
+     * What is mapped around a point: buildings and land use from OpenStreetMap
+     * (Overpass), place name from Nominatim - both free and keyless. The pure
+     * analyzer turns it into a dwelling/material suggestion for the food plan.
+     * OSM coverage is uneven, so every failure degrades to an honest partial
+     * answer rather than a 5xx.
+     */
+    if (url.pathname === '/surroundings') {
+      const lat = Number(url.searchParams.get('lat'));
+      const lon = Number(url.searchParams.get('lon'));
+      if (!url.searchParams.has('lat') || !url.searchParams.has('lon')) {
+        return json({ error: 'lat and lon are required, e.g. /surroundings?lat=-1.286&lon=36.818' }, { status: 400 });
+      }
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+        return json({ error: 'lat and lon must be numbers within -90..90 and -180..180' }, { status: 400 });
+      }
+      const key = `surr:${lat.toFixed(3)},${lon.toFixed(3)}`;
+      const hit = cache.get(key);
+      if (hit && Date.now() - hit.at < hit.ttl) return json(hit.value);
+
+      const UA = 'Msimu food-security planner (https://msimu.shikunyi.workers.dev; geraldshikunyi@gmail.com)';
+      const notes = [];
+      let elements = [];
+      let sourceOk = false;
+      // Source order, decided 4 November 2026 after live probing from both a
+      // workstation and the deployed Worker: the official OSM API answers a
+      // small bbox in ~2 s every time, while every public Overpass mirror was
+      // shedding (overpass-api.de 521s datacenter IPs, kumi and private.coffee
+      // timed out, osm.ch returned an incomplete planet). So the bbox call is
+      // primary and the mirrors are the fallback, not the other way round.
+      const half = 0.0055; // ~610 m: covers the 300 m building ring and the 550 m land ring
+      try {
+        const bbox = [lon - half, lat - half, lon + half, lat + half].map((n) => n.toFixed(5)).join(',');
+        const res = await fetch(`https://api.openstreetmap.org/api/0.6/map?bbox=${bbox}`, {
+          headers: { 'user-agent': UA },
+          signal: AbortSignal.timeout(15000),
+        });
+        if (res.ok) {
+          elements = osmXmlToElements(await res.text(), lat, lon);
+          sourceOk = true;
+        } else {
+          notes.push(`osm_api:http_${res.status}`);
+        }
+      } catch (err) {
+        notes.push(`osm_api:${String(err?.message ?? err).slice(0, 30)}`);
+      }
+      if (!sourceOk) {
+        const query = `[out:json][timeout:10];(way["building"](around:300,${lat},${lon});way["landuse"~"farmland|farmyard|orchard|meadow|greenhouse_horticulture"](around:550,${lat},${lon});way["leisure"~"garden|park"](around:550,${lat},${lon}););out tags center 80;`;
+        for (const endpoint of [
+          'https://overpass.kumi.systems/api/interpreter',
+          'https://overpass-api.de/api/interpreter',
+          'https://overpass.private.coffee/api/interpreter',
+        ]) {
+          try {
+            const res = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': UA },
+              body: `data=${encodeURIComponent(query)}`,
+              signal: AbortSignal.timeout(12000),
+            });
+            if (res.ok) {
+              elements = (await res.json())?.elements ?? [];
+              sourceOk = true;
+              break;
+            }
+            notes.push(`overpass:${new URL(endpoint).hostname}:http_${res.status}`);
+          } catch (err) {
+            notes.push(`overpass:${new URL(endpoint).hostname}:${String(err?.message ?? err).slice(0, 30)}`);
+          }
+        }
+      }
+      let reverse = null;
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&zoom=16`,
+          { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(9000) },
+        );
+        if (res.ok) reverse = await res.json();
+        else notes.push(`nominatim:http_${res.status}`);
+      } catch (err) {
+        notes.push(`nominatim:${String(err?.message ?? err).slice(0, 40)}`);
+      }
+      const value = {
+        requested: { latitude: lat, longitude: lon },
+        ...analyzeSurroundings({ elements, reverse }),
+        ...(notes.length ? { upstream_notes: notes } : {}),
+      };
+      // A complete answer (a map source responded) is stable data: cache 24 h.
+      // A degraded one only gets 10 minutes so a source retry can heal it soon.
+      cache.set(key, { at: Date.now(), ttl: sourceOk ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000, value });
+      return json(value);
     }
 
     if (url.pathname === '/kitchen') {
@@ -751,7 +869,7 @@ export async function handle(request, env = {}) {
       return json({ ...result, ...(failures.length ? { lane_notes: failures } : {}) });
     }
 
-    return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/locate', '/forecast', '/advisory', '/kitchen', '/skill', '/food-security', '/photo-roof', '/ussd'] }, { status: 404 });
+    return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/locate', '/forecast', '/advisory', '/kitchen', '/skill', '/food-security', '/surroundings', '/ip-location', '/photo-roof', '/ussd'] }, { status: 404 });
   } catch (err) {
     return json(
       { error: String(err?.message ?? err), site: wardRef ? null : siteId, ward: wardRef ?? null },

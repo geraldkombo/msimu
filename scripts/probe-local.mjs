@@ -70,7 +70,7 @@ try {
     check('dashboard loads boundary files lazily per county', homeBody.includes('boundaries/'));
     check('no county is hardcoded into the dashboard', !homeBody.includes('kajiado-wards.geojson'));
     check('dashboard has legend + attribution nodes', homeBody.includes('id="legend"') && homeBody.includes('id="ward-attrib"'));
-    check('dashboard has the food-security planner', homeBody.includes('id="bfood"') && homeBody.includes('id="fdwelling"') && homeBody.includes('id="bshare"') && homeBody.includes('id="fmat"') && homeBody.includes('id="bphoto"') && homeBody.includes('id="pnoon"') && homeBody.includes('/food-security?'));
+    check('dashboard has the food-security planner', homeBody.includes('id="bfood"') && homeBody.includes('id="fdwelling"') && homeBody.includes('id="bshare"') && homeBody.includes('id="fmat"') && homeBody.includes('id="bphoto"') && homeBody.includes('id="pnoon"') && homeBody.includes('id="surround-status"') && homeBody.includes('/food-security?'));
     check('dashboard defaults to English', homeBody.includes('id="en" aria-pressed="true"') && homeBody.includes("let lang = 'en'"));
     check('dashboard attributes geoBoundaries', homeBody.includes('geoBoundaries'));
     check('dashboard discloses borrowed ERA5 cells', /nearestCell/.test(homeBody));
@@ -267,6 +267,24 @@ try {
     check('/food-security validates the household size', foodBad2.status === 400, `status ${foodBad2.status}`);
 
     check('GET /health advertises /food-security', (health?.routes ?? []).some((r) => r.startsWith('/food-security')), `${(health?.routes ?? []).length} routes`);
+
+    const surrBad = await fetch(`${base}/surroundings`);
+    check('/surroundings requires coordinates', surrBad.status === 400, `status ${surrBad.status}`);
+    const surr = await fetch(`${base}/surroundings?lat=-1.286&lon=36.818`);
+    const srj = await surr.json().catch(() => null);
+    check(
+      '/surroundings analyses the mapped neighbourhood or degrades honestly',
+      surr.ok && srj?.data_status === 'osm_heuristic' && typeof srj?.buildings?.count === 'number' && 'suggestion' in srj && Boolean(srj?.caveat),
+      `status ${surr.status}, buildings ${srj?.buildings?.count ?? '?'}, dwelling ${srj?.suggestion?.dwelling ?? 'null'}`,
+    );
+    check('GET /health advertises /surroundings', (health?.routes ?? []).some((r) => r.startsWith('/surroundings')), `${(health?.routes ?? []).length} routes`);
+    const iploc = await fetch(`${base}/ip-location`);
+    const ij = await iploc.json().catch(() => null);
+    check(
+      '/ip-location answers from the request metadata or admits it cannot',
+      (iploc.status === 200 && ij?.basis === 'cloudflare_ip' && Number.isFinite(ij?.latitude)) || iploc.status === 404,
+      `status ${iploc.status}, lat ${ij?.latitude ?? '-'}`,
+    );
 
     const missing = await fetch(`${base}/nope`);
     check('unknown route 404s', missing.status === 404, `status ${missing.status}`);
