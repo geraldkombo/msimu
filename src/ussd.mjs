@@ -10,11 +10,11 @@ function cropLine(c, locale) {
 
 export function ussdMenu({ site, locale }) {
   return locale === 'sw'
-    ? `Karibu Msimu - ${site.name}.\n1. Ushauri wa kupanda\n2. Hali ya mvua msimu huu\n3. Kuhusu huduma hii`
-    : `Welcome to Msimu - ${site.name}.\n1. Planting advice\n2. This season's rainfall outlook\n3. About this service`;
+    ? `Karibu Msimu - ${site.name}.\n1. Ushauri wa kupanda\n2. Hali ya mvua msimu huu\n3. Kuhusu huduma hii\n4. Mpango wa chakula na maji`
+    : `Welcome to Msimu - ${site.name}.\n1. Planting advice\n2. This season's rainfall outlook\n3. About this service\n4. Food and water plan`;
 }
 
-export function ussdResponse(text, { site, advisory, outlook, crops, locale = 'sw' }) {
+export function ussdResponse(text, { site, advisory, outlook, crops, food, locale = 'sw' }) {
   const t = String(text ?? '').trim();
   const byId = new Map((crops ?? []).map((c) => [c.id, c]));
 
@@ -59,6 +59,26 @@ export function ussdResponse(text, { site, advisory, outlook, crops, locale = 's
           ? 'Msimu hugeuza utabiri wa msimu kuwa hatua ya kilimo. Chanzo: ECMWF SEAS5 kupitia Open-Meteo, ukilinganishwa na historia ya ERA5 2005-2024. Huduma ya majaribio - onana na afisa kilimo wa kata.'
           : 'Msimu turns a seasonal forecast into a farming decision. Source: ECMWF SEAS5 via Open-Meteo, classified against an ERA5 2005-2024 baseline. Pilot service - confirm with your ward extension officer.',
     };
+  }
+
+  if (t === '4') {
+    // USSD lives or dies by the screen budget: pack whole lines up to ~300
+    // chars, never more than four, never a truncated half-sentence.
+    const out = [];
+    let n = 0;
+    for (const l of food?.lines ?? []) {
+      if (out.length >= 4) break;
+      if (out.length > 0 && n + String(l).length > 300) break;
+      out.push(String(l));
+      n += String(l).length + 1;
+    }
+    if (out.length === 0) {
+      return {
+        end: true,
+        body: locale === 'sw' ? 'Hakuna mpango wa chakula kwa sasa. Jaribu tena baadaye.' : 'No food plan available right now. Try again later.',
+      };
+    }
+    return { end: true, body: out.join('\n') };
   }
 
   return {

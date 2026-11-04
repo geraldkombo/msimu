@@ -1,0 +1,408 @@
+{
+  "place": {
+    "label": "Olkeri (-1.4275, 36.6865)",
+    "latitude": -1.4275,
+    "longitude": 36.6865,
+    "ward": "Olkeri",
+    "county": "Kajiado"
+  },
+  "models_requested": [
+    "ecmwf_ifs025",
+    "gfs_seamless",
+    "icon_seamless",
+    "meteofrance_seamless",
+    "ukmo_seamless"
+  ],
+  "sanity": {
+    "lead_offsets_with_data": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "distinct_window_totals": [
+      3.5,
+      3.7,
+      5.1,
+      7.4,
+      7.6,
+      7.9,
+      8.4,
+      9.8,
+      9.9,
+      10.3,
+      11.1,
+      11.3,
+      12.4,
+      13.7,
+      15,
+      15.9,
+      17.2,
+      17.4,
+      18.2,
+      18.4,
+      19.1,
+      19.8,
+      20.3,
+      26,
+      27.7,
+      29.3,
+      29.6,
+      33.7,
+      36.1,
+      39,
+      42.2,
+      43.1,
+      43.7,
+      52.9
+    ],
+    "note": "lead 0 is the current run, equivalent to the live forecast API"
+  },
+  "data_status": "live_verification",
+  "rank_metric": "mean absolute error in mm (lower is better); CSI reported alongside",
+  "window": {
+    "start": "2026-10-25",
+    "end": "2026-10-31",
+    "days": [
+      "2026-10-25",
+      "2026-10-26",
+      "2026-10-27",
+      "2026-10-28",
+      "2026-10-29",
+      "2026-10-30",
+      "2026-10-31"
+    ]
+  },
+  "threshold_mm": 1,
+  "grid_point": {
+    "latitude": -1.5,
+    "longitude": 36.75,
+    "elevation_m": 1842
+  },
+  "observed_total_mm": 17.7,
+  "observed_daily_mm": {
+    "2026-10-25": 0,
+    "2026-10-26": 1,
+    "2026-10-27": 0.8,
+    "2026-10-28": 1.1,
+    "2026-10-29": 2.2,
+    "2026-10-30": 7,
+    "2026-10-31": 5.6
+  },
+  "wet_days": 5,
+  "models": [
+    {
+      "key": "icon_seamless",
+      "label": "DWD ICON",
+      "leads_scored": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "mae_by_lead": {
+        "0": 1.37,
+        "1": 1.91,
+        "2": 2,
+        "3": 1.43,
+        "4": 1.47,
+        "5": 1.44,
+        "6": 1.36
+      },
+      "bias_by_lead": {
+        "0": -0.91,
+        "1": -1.8,
+        "2": -2,
+        "3": -1.4,
+        "4": -1.47,
+        "5": -1.33,
+        "6": -0.39
+      },
+      "csi_by_lead": {
+        "0": 0.6,
+        "1": 0.4,
+        "2": 0.2,
+        "3": 0.4,
+        "4": 0.4,
+        "5": 0.6,
+        "6": 0.6
+      },
+      "mean_mae_short_range_mm": 1.76,
+      "mean_mae_all_leads_mm": 1.57,
+      "mean_bias_all_leads_mm": -1.33,
+      "rank_short_range": 1
+    },
+    {
+      "key": "gfs_seamless",
+      "label": "NOAA GFS",
+      "leads_scored": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "mae_by_lead": {
+        "0": 3.11,
+        "1": 1.79,
+        "2": 1.29,
+        "3": 1.44,
+        "4": 0.83,
+        "5": 1.41,
+        "6": 2.39,
+        "7": 2.41
+      },
+      "bias_by_lead": {
+        "0": 2.63,
+        "1": 0.1,
+        "2": -1.06,
+        "3": -1.44,
+        "4": 0.2,
+        "5": -0.04,
+        "6": -0.76,
+        "7": -1.13
+      },
+      "csi_by_lead": {
+        "0": 0.6,
+        "1": 0.6,
+        "2": 0.6,
+        "3": 0.4,
+        "4": 1,
+        "5": 0.333,
+        "6": 0.5,
+        "7": 0.333
+      },
+      "mean_mae_short_range_mm": 2.06,
+      "mean_mae_all_leads_mm": 1.83,
+      "mean_bias_all_leads_mm": -0.19,
+      "rank_short_range": 2
+    },
+    {
+      "key": "meteofrance_seamless",
+      "label": "MeteoFrance",
+      "leads_scored": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "mae_by_lead": {
+        "0": 2.34,
+        "1": 2.03,
+        "2": 1.91,
+        "3": 2.09
+      },
+      "bias_by_lead": {
+        "0": -0.57,
+        "1": -2.03,
+        "2": -0.94,
+        "3": -1.11
+      },
+      "csi_by_lead": {
+        "0": 0.4,
+        "1": 0.4,
+        "2": 0.6,
+        "3": 0.6
+      },
+      "mean_mae_short_range_mm": 2.09,
+      "mean_mae_all_leads_mm": 2.09,
+      "mean_bias_all_leads_mm": -1.16,
+      "rank_short_range": 3
+    },
+    {
+      "key": "ukmo_seamless",
+      "label": "UKMO",
+      "leads_scored": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "mae_by_lead": {
+        "0": 1.87,
+        "1": 2.64,
+        "2": 2.31,
+        "3": 0.63,
+        "4": 1.24,
+        "5": 0.81,
+        "6": 4.27
+      },
+      "bias_by_lead": {
+        "0": 0.07,
+        "1": 1.19,
+        "2": 1.66,
+        "3": -0.26,
+        "4": -0.07,
+        "5": 0.3,
+        "6": 1.7
+      },
+      "csi_by_lead": {
+        "0": 0.8,
+        "1": 0.8,
+        "2": 0.5,
+        "3": 0.5,
+        "4": 0.833,
+        "5": 0.833,
+        "6": 1
+      },
+      "mean_mae_short_range_mm": 2.27,
+      "mean_mae_all_leads_mm": 1.97,
+      "mean_bias_all_leads_mm": 0.66,
+      "rank_short_range": 4
+    },
+    {
+      "key": "ecmwf_ifs025",
+      "label": "ECMWF IFS 0.25",
+      "leads_scored": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "mae_by_lead": {
+        "0": 0.74,
+        "1": 2.4,
+        "2": 3.74,
+        "3": 3.5,
+        "4": 5.06,
+        "5": 2.71,
+        "6": 3.74,
+        "7": 3.41
+      },
+      "bias_by_lead": {
+        "0": 0.37,
+        "1": 1.43,
+        "2": 3.71,
+        "3": 3.5,
+        "4": 5.03,
+        "5": 2.29,
+        "6": 3.63,
+        "7": 3.04
+      },
+      "csi_by_lead": {
+        "0": 0.667,
+        "1": 0.833,
+        "2": 0.833,
+        "3": 0.714,
+        "4": 0.833,
+        "5": 0.833,
+        "6": 0.833,
+        "7": 0.833
+      },
+      "mean_mae_short_range_mm": 2.29,
+      "mean_mae_all_leads_mm": 3.16,
+      "mean_bias_all_leads_mm": 2.87,
+      "rank_short_range": 5
+    }
+  ],
+  "best_short_range": {
+    "key": "icon_seamless",
+    "label": "DWD ICON",
+    "mean_mae_mm": 1.76
+  },
+  "csi_saturated": false,
+  "per_lead_best": [
+    {
+      "lead_days": 0,
+      "best": {
+        "key": "ukmo_seamless",
+        "label": "UKMO",
+        "mae_mm": 1.87
+      },
+      "unavailable": []
+    },
+    {
+      "lead_days": 1,
+      "best": {
+        "key": "ecmwf_ifs025",
+        "label": "ECMWF IFS 0.25",
+        "mae_mm": 2.4
+      },
+      "unavailable": []
+    },
+    {
+      "lead_days": 2,
+      "best": {
+        "key": "ecmwf_ifs025",
+        "label": "ECMWF IFS 0.25",
+        "mae_mm": 3.74
+      },
+      "unavailable": []
+    },
+    {
+      "lead_days": 3,
+      "best": {
+        "key": "ecmwf_ifs025",
+        "label": "ECMWF IFS 0.25",
+        "mae_mm": 3.5
+      },
+      "unavailable": []
+    },
+    {
+      "lead_days": 4,
+      "best": {
+        "key": "gfs_seamless",
+        "label": "NOAA GFS",
+        "mae_mm": 0.83
+      },
+      "unavailable": [
+        "MeteoFrance"
+      ]
+    },
+    {
+      "lead_days": 5,
+      "best": {
+        "key": "ukmo_seamless",
+        "label": "UKMO",
+        "mae_mm": 0.81
+      },
+      "unavailable": [
+        "MeteoFrance"
+      ]
+    },
+    {
+      "lead_days": 6,
+      "best": {
+        "key": "ukmo_seamless",
+        "label": "UKMO",
+        "mae_mm": 4.27
+      },
+      "unavailable": [
+        "MeteoFrance"
+      ]
+    },
+    {
+      "lead_days": 7,
+      "best": {
+        "key": "ecmwf_ifs025",
+        "label": "ECMWF IFS 0.25",
+        "mae_mm": 3.41
+      },
+      "unavailable": [
+        "DWD ICON",
+        "MeteoFrance",
+        "UKMO"
+      ]
+    }
+  ],
+  "reference_source": "Open-Meteo forecast API, daily precipitation_sum (best_match analysis)",
+  "caveat": "Reference \"observed\" series is the Open-Meteo best_match analysis blend, not a rain gauge. Over data-sparse regions this is a model analysis constrained by observations. All categorical scores depend on the stated daily threshold.",
+  "generated_at": "2026-11-01T12:22:03.507Z"
+}

@@ -104,8 +104,8 @@
       <select id="ward" aria-label="Ward"></select>
       <label><input type="checkbox" id="irr" /> <span id="lbl-irr">Umwagiliaji</span></label>
       <div class="switch" role="group" aria-label="Language">
-        <button id="sw" aria-pressed="true">SW</button>
-        <button id="en" aria-pressed="false">EN</button>
+        <button id="sw" aria-pressed="false">SW</button>
+        <button id="en" aria-pressed="true">EN</button>
       </div>
     </div>
   </header>
@@ -121,8 +121,19 @@
       <button id="plookup" type="button">Tafuta</button>
     </div>
     <div class="controls" style="margin-top:10px">
-      <label for="paspect" id="lbl-paspect">Jua mahali pako</label>
-      <select id="paspect">
+      <label for="pnoon" id="lbl-pnoon">At midday, is the growing spot in sun or shade?</label>
+      <select id="pnoon">
+        <option value="sun">Sun</option>
+        <option value="shade">Shade</option>
+        <option value="unsure">Not sure</option>
+      </select>
+      <label for="pmorning" id="lbl-pmorning">In the morning, is it in sun or shade?</label>
+      <select id="pmorning">
+        <option value="sun">Sun</option>
+        <option value="shade">Shade</option>
+        <option value="unsure">Not sure</option>
+      </select>
+      <select id="paspect" hidden>
         <option value="unknown">Sijui</option>
         <option value="full_sun">Jua kila siku</option>
         <option value="morning_sun">Jua asubuhi</option>
@@ -143,6 +154,7 @@
         <option value="above">Juu ya kawaida</option>
       </select>
       <button id="pkitchen" type="button">Ushauri wa bustani ya jikoni</button>
+      <button id="pskill" type="button">Usahihi wa matabiri</button>
     </div>
     <p class="note" id="point-status" style="margin-top:10px"></p>
     <div id="point-result" style="margin-top:10px"></div>
@@ -172,6 +184,37 @@
   <section class="card" style="margin-top:20px">
     <h2 id="h-advice">Ushauri</h2>
     <div id="advice"><div class="state">Inapakia&hellip;</div></div>
+  </section>
+
+  <section class="card" style="margin-top:20px">
+    <h2 id="h-food">Mpango wa usalama wa chakula</h2>
+    <div class="controls">
+      <label for="fdwelling" id="lbl-fdwelling">Where you live</label>
+      <select id="fdwelling">
+        <option value="house">House with its own roof</option>
+        <option value="flat">Flat / apartment (shared or no roof)</option>
+      </select>
+      <label for="froofL" id="lbl-froofL">Roof length (m)</label>
+      <input id="froofL" type="number" min="0" max="100" step="0.5" value="6" inputmode="decimal" style="width:6em" />
+      <label for="froofW" id="lbl-froofW">Roof width (m)</label>
+      <input id="froofW" type="number" min="0" max="100" step="0.5" value="5" inputmode="decimal" style="width:6em" />
+      <label for="fmat" id="lbl-fmat">Roof material</label>
+      <select id="fmat">
+        <option value="iron">Iron sheet</option>
+        <option value="tiles">Tiles or concrete</option>
+        <option value="thatch">Thatch</option>
+      </select>
+      <button id="bphoto" type="button">Check my roof photo</button>
+      <input id="fphoto" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+      <label for="froof" id="lbl-froof">Eneo la paa (m2)</label>
+      <input id="froof" type="number" min="0" max="1000" step="1" value="30" inputmode="numeric" style="width:7em" />
+      <label for="fpeople" id="lbl-fpeople">Watu nyumbani</label>
+      <input id="fpeople" type="number" min="1" max="30" step="1" value="4" inputmode="numeric" style="width:6em" />
+      <button id="bfood" type="button">Tengeneza mpango</button>
+      <button id="bshare" type="button" hidden>Share this plan</button>
+    </div>
+    <p class="note" id="food-status" style="margin-top:10px"></p>
+    <div id="food-result" style="margin-top:10px"></div>
   </section>
 
   <footer>
@@ -233,7 +276,7 @@ const T = {
 };
 const TER_COLOR = { above: '#1f6f8b', near: '#7a7f85', below: '#b4691a', unknown: '#b8b3a8' };
 
-let lang = 'sw';
+let lang = 'en';
 let map, marker;
 
 const $ = (id) => document.getElementById(id);
@@ -490,8 +533,15 @@ for (const id of ['sw', 'en']) {
     refresh();
   });
 }
-$('county').addEventListener('change', refresh);
-$('ward').addEventListener('change', load);
+$('county').addEventListener('change', () => {
+  foodTarget = 'ward';
+  refresh().then(() => { if (lastFood) doFood(); });
+});
+$('ward').addEventListener('change', () => {
+  foodTarget = 'ward';
+  load();
+  if (lastFood) doFood();
+});
 $('irr').addEventListener('change', load);
 
 loadCounties().then(refresh);
@@ -515,8 +565,11 @@ const PT = {
     geo: 'Tumia GPS yangu',
     lookup: 'Tafuta',
     kitchenBtn: 'Ushauri wa bustani ya jikoni',
+    skillBtn: 'Usahihi wa matabiri',
     lat: 'Latitudo', lon: 'Longitudo',
     aspect: 'Jua mahali pako', water: 'Chanzo cha maji', tercile: 'Hali ya mvua',
+    sunNoon: 'Adhuhuri, mahali pa kupanda kuna jua au kivuli?', sunMorning: 'Asubuhi, kuna jua au kivuli?',
+    sunOpts: { sun: 'Jua', shade: 'Kivuli', unsure: 'Sijui' },
     aspects: { unknown: 'Sijui', full_sun: 'Jua kila siku', morning_sun: 'Jua asubuhi', afternoon_shade: 'Kivuli jioni', shaded: 'Kivuli sana' },
     waters: { unknown: 'Sijui', tap: 'Mfereji/bomba', rainwater: 'Mvua', purchased: 'Maji ya kununua' },
     terciles: { near: 'Kawaida', below: 'Chini ya kawaida', above: 'Juu ya kawaida' },
@@ -537,6 +590,31 @@ const PT = {
     warnings: 'Tahadhari',
     depth: 'kina', litres: 'lita', days: 'siku', spacing: 'nafasi',
     draftNote: 'Vipimo vya vyombo ni makadirio ya kawaida ya kilimo, si data ya majaribio ya Kenya. Thibitisha na afisa kilimo wa kaunti kabla ya kutegemea kwa biashara.',
+    skillH: 'Ubao wa usahihi wa mifano ya hali ya hewa',
+    skillWindow: (w) => `Dirisha: ${w.start} hadi ${w.end} (siku ${w.days.length}, ikimalizia jana).`,
+    skillObserved: (d) => `Mvua iliyonyesha: jumla mm ${d.observed_total_mm}, siku zenye mvua ${d.wet_days} (kizingiti mm ${d.threshold_mm}).`,
+    skillCols: ['Mfano', 'Kosa la wastani, siku 0-2 (mm)', 'Kosa la wastani, siku zote (mm)', 'Upendeleo (mm)'],
+    skillBest: (b) => `Bora kwa siku 0-2: ${b.label}, kosa la wastani mm ${b.mean_mae_mm}.`,
+    skillSat: 'CSI imejaa (kila mfano aligundua mvua): angalia makosa ya mm badala yake.',
+    skillNote: 'Kipimo cha "iliyonyesha" ni mchanganyiko wa uchambuzi wa Open-Meteo, si kifaa cha mvua. Umaarufu wa siku chache zilizopita si uhakika wa msimu mzima.',
+    skillNoData: 'Hakuna data ya kutosha ya mifano iliyohifadhiwa kwa dirisha hili.',
+    foodH: 'Mpango wa usalama wa chakula',
+    foodDwelling: 'Unakoishi',
+    dwellings: { house: 'Nyumba yenye paa lake', flat: 'Ghorofa / flat (paa la pamoja au hakuna)' },
+    foodRoof: 'Eneo la paa (m2)', foodPeople: 'Watu nyumbani', foodBtn: 'Tengeneza mpango',
+    share: 'Shiriki mpango', shareCopied: 'Mpango umenakiliwa - ubandike kwenye WhatsApp au SMS.', shareFailed: 'Kushiriki hakukufaulu.',
+    flatRoofNote: 'Ghorofa: paa ni la pamoja, hivyo mpango unatumia maji ya kununua isipokuwa uandike sehemu yako ya paa (m2).',
+    roofLen: 'Urefu wa paa (m)', roofWid: 'Upana wa paa (m)',
+    material: 'Aina ya paa', materials: { iron: 'Mabati', tiles: 'Vigae au zege', thatch: 'Makuti' },
+    thatchNote: 'Paa la makuti haliwezi kuvuna maji: mpango utatumia maji ya kununua.',
+    tilesNote: 'Vigae na zege vinamwaga mvua kidogo kuliko mabati: ukubwa wa tangi ni makadirio bora.',
+    photoBtn: 'Kagua picha ya paa langu', photoWorking: 'Inasoma picha...', photoFail: 'Kikao cha picha hakipatikani sasa - chagua aina ya paa mwenyewe.',
+    photoDone: (m, c) => `Picha inaonyesha: ${m} (uhakika: ${c}). Thibitisha kwa macho, kisha jenga mpango upya.`,
+    foodVerify: 'Na nani kuthibitisha mpango huu',
+    foodNeed: 'Chagua kata au weka latitudo na longitudo kwanza.',
+    foodCrops: 'Mimea ya kupanda na miezi ya kuvuna',
+    foodCrop: 'Zao', foodPlant: 'Panda ifikapo', foodHarvest: 'Vuna',
+    foodSources: 'Vyanzo za namba hizi',
     err: 'Imeshindikana.',
   },
   en: {
@@ -544,8 +622,11 @@ const PT = {
     geo: 'Use my GPS',
     lookup: 'Look up',
     kitchenBtn: 'Kitchen garden advice',
+    skillBtn: 'Forecast accuracy',
     lat: 'Latitude', lon: 'Longitude',
     aspect: 'Sun at your site', water: 'Water source', tercile: 'Rain outlook',
+    sunNoon: 'At midday, is the growing spot in sun or shade?', sunMorning: 'In the morning, is it in sun or shade?',
+    sunOpts: { sun: 'Sun', shade: 'Shade', unsure: 'Not sure' },
     aspects: { unknown: 'Unknown', full_sun: 'Full sun', morning_sun: 'Morning sun', afternoon_shade: 'Afternoon shade', shaded: 'Heavily shaded' },
     waters: { unknown: 'Unknown', tap: 'Tap or pipe', rainwater: 'Rainwater', purchased: 'Purchased water' },
     terciles: { near: 'Near normal', below: 'Below normal', above: 'Above normal' },
@@ -566,6 +647,31 @@ const PT = {
     warnings: 'Warnings',
     depth: 'depth', litres: 'litres', days: 'days', spacing: 'spacing',
     draftNote: 'Container measurements are standard horticultural ranges, not Kenyan trial data. Confirm with a county extension officer before relying on them commercially.',
+    skillH: 'Model accuracy scoreboard',
+    skillWindow: (w) => `Window: ${w.start} to ${w.end} (${w.days.length} days, ending yesterday).`,
+    skillObserved: (d) => `Rain that fell: ${d.observed_total_mm} mm total, ${d.wet_days} wet days (threshold ${d.threshold_mm} mm).`,
+    skillCols: ['Model', 'Mean error, days 0-2 (mm)', 'Mean error, all leads (mm)', 'Bias (mm)'],
+    skillBest: (b) => `Best over days 0-2: ${b.label}, mean error ${b.mean_mae_mm} mm.`,
+    skillSat: 'CSI is saturated (every model detected the rain): read the mm errors instead.',
+    skillNote: 'The "observed" reference is the Open-Meteo analysis blend, not a rain gauge. A few recent days are not a verdict on a whole season.',
+    skillNoData: 'Not enough archived model data for this window.',
+    foodH: 'Food security plan',
+    foodDwelling: 'Where you live',
+    dwellings: { house: 'House with its own roof', flat: 'Flat / apartment (shared or no roof)' },
+    foodRoof: 'Roof area (m2)', foodPeople: 'People in household', foodBtn: 'Build the plan',
+    share: 'Share this plan', shareCopied: 'Plan copied - paste it into WhatsApp or SMS.', shareFailed: 'Sharing failed.',
+    flatRoofNote: 'Flat: the roof is shared, so the plan runs on bought water unless you enter your own roof share in m2.',
+    roofLen: 'Roof length (m)', roofWid: 'Roof width (m)',
+    material: 'Roof material', materials: { iron: 'Iron sheet', tiles: 'Tiles or concrete', thatch: 'Thatch' },
+    thatchNote: 'A thatch roof cannot harvest water: the plan will run on bought water.',
+    tilesNote: 'Tiles and rough concrete shed less rain than iron sheet: the tank size is a best case.',
+    photoBtn: 'Check my roof photo', photoWorking: 'Reading the photo...', photoFail: 'Photo check unavailable right now - pick the roof material yourself.',
+    photoDone: (m, c) => `The photo says: ${m} (confidence: ${c}). Confirm with your eyes, then rebuild the plan.`,
+    foodVerify: 'Who to confirm this plan with',
+    foodNeed: 'Select a ward or enter latitude and longitude first.',
+    foodCrops: 'Planting plan with harvest months',
+    foodCrop: 'Crop', foodPlant: 'Plant by', foodHarvest: 'Harvest',
+    foodSources: 'Sources behind these numbers',
     err: 'Failed.',
   },
 };
@@ -578,6 +684,7 @@ function ptLabels() {
   $('geolocate').textContent = t.geo;
   $('plookup').textContent = t.lookup;
   $('pkitchen').textContent = t.kitchenBtn;
+  $('pskill').textContent = t.skillBtn;
   $('lbl-plat').textContent = t.lat;
   $('lbl-plon').textContent = t.lon;
   $('lbl-paspect').textContent = t.aspect;
@@ -586,12 +693,37 @@ function ptLabels() {
   for (const [sel, dict] of [['paspect', t.aspects], ['pwater', t.waters], ['pter', t.terciles]]) {
     for (const opt of $(sel).options) if (dict[opt.value]) opt.textContent = dict[opt.value];
   }
+  $('lbl-pnoon').textContent = t.sunNoon;
+  $('lbl-pmorning').textContent = t.sunMorning;
+  for (const sel of ['pnoon', 'pmorning']) {
+    for (const opt of $(sel).options) if (t.sunOpts[opt.value]) opt.textContent = t.sunOpts[opt.value];
+  }
   if (lastPoint) renderPoint(lastPoint);
   if (lastKitchen) renderKitchen(lastKitchen);
+  if (lastSkill) renderSkill(lastSkill);
+  $('h-food').textContent = t.foodH;
+  $('lbl-fdwelling').textContent = t.foodDwelling;
+  for (const opt of $('fdwelling').options) if (t.dwellings[opt.value]) opt.textContent = t.dwellings[opt.value];
+  $('lbl-froofL').textContent = t.roofLen;
+  $('lbl-froofW').textContent = t.roofWid;
+  $('lbl-fmat').textContent = t.material;
+  for (const opt of $('fmat').options) if (t.materials[opt.value]) opt.textContent = t.materials[opt.value];
+  $('bphoto').textContent = t.photoBtn;
+  $('lbl-froof').textContent = t.foodRoof;
+  $('lbl-fpeople').textContent = t.foodPeople;
+  $('bfood').textContent = t.foodBtn;
+  $('bshare').textContent = t.share;
+  if (lastFood) renderFood(lastFood);
 }
 
 let lastPoint = null;
 let lastKitchen = null;
+let lastSkill = null;
+let lastFood = null;
+// Which target the food card follows: the ward pickers, or the point card once
+// the user has run a lookup or GPS fix. Prevents stale coordinates in the
+// lat/lon fields from silently hijacking a ward plan.
+let foodTarget = 'ward';
 
 function renderPoint(d) {
   const t = pt();
@@ -622,6 +754,32 @@ function renderKitchen(d) {
     <p class="warn">${esc(d.data_status === 'unverified_draft' ? t.draftNote : d.caveat)}</p>`;
 }
 
+function renderSkill(d) {
+  const t = pt();
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  if (!d.models || !d.models.length) {
+    $('point-result').innerHTML = `<h3>${esc(t.skillH)}</h3><p class="note">${esc(t.skillNoData)}</p>`;
+    return;
+  }
+  const rows = d.models.map((mo, i) => `
+    <tr${i === 0 ? ' style="font-weight:600"' : ''}>
+      <td>${esc(mo.label)}</td>
+      <td>${mo.mean_mae_short_range_mm ?? '-'}</td>
+      <td>${mo.mean_mae_all_leads_mm ?? '-'}</td>
+      <td>${mo.mean_bias_all_leads_mm ?? '-'}</td>
+    </tr>`).join('');
+  $('point-result').innerHTML = `
+    <h3>${esc(t.skillH)}</h3>
+    <p class="note">${esc(t.skillWindow(d.window))} ${esc(t.skillObserved(d))}</p>
+    <table>
+      <thead><tr>${t.skillCols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p><strong>${d.best_short_range ? esc(t.skillBest(d.best_short_range)) : esc(t.skillNoData)}</strong></p>
+    ${d.csi_saturated ? `<p class="note">${esc(t.skillSat)}</p>` : ''}
+    <p class="warn">${esc(d.caveat)} ${esc(t.skillNote)}</p>`;
+}
+
 async function doLookup() {
   const t = pt();
   const lat = $('plat').value.trim();
@@ -638,6 +796,8 @@ async function doLookup() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     lastPoint = await res.json();
     renderPoint(lastPoint);
+    foodTarget = 'point';
+    if (lastFood) doFood();
   } catch (err) {
     $('point-status').textContent = `${t.err} ${String(err.message)}`;
   }
@@ -663,10 +823,103 @@ async function doKitchen() {
     const res = await fetch(`/kitchen?${q}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     lastKitchen = await res.json();
+    lastSkill = null;
     lastPoint = lastKitchen.location ?? lastPoint;
     renderKitchen(lastKitchen);
   } catch (err) {
     $('point-status').textContent = `${t.err} ${String(err.message)}`;
+  }
+}
+
+async function doSkill() {
+  const t = pt();
+  const lat = $('plat').value.trim();
+  const lon = $('plon').value.trim();
+  if (!lat || !lon) {
+    $('point-status').textContent = t.needCoords;
+    return;
+  }
+  $('point-status').textContent = t.loading;
+  try {
+    const q = new URLSearchParams({ lat, lon, days: '7', lang });
+    const res = await fetch(`/skill?${q}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    lastSkill = await res.json();
+    lastKitchen = null;
+    renderSkill(lastSkill);
+  } catch (err) {
+    $('point-status').textContent = `${t.err} ${String(err.message)}`;
+  }
+}
+
+function renderFood(d) {
+  const t = pt();
+  if (!foodPeopleDirty && Number.isFinite(d?.inputs?.people)) $('fpeople').value = d.inputs.people;
+  $('bshare').hidden = false;
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const name = (p) => (lang === 'en' || !p.sw || p.sw === p.en ? p.en : `${p.sw} (${p.en})`);
+  const lines = (d.lines ?? []).map((l) => `<li>${esc(l)}</li>`).join('');
+  const MON = {
+    sw: ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ago', 'Sep', 'Okt', 'Nov', 'Des'],
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  };
+  const fmtMonth = (k) => {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(k ?? ''));
+    return m ? `${(MON[lang] ?? MON.en)[Number(m[2]) - 1]} ${m[1]}` : String(k ?? '');
+  };
+  const cropRows = (d.planting?.plant ?? [])
+    .map((p) => `<tr><td>${esc(name(p))}</td><td>${esc(fmtMonth(p.plant_by))}</td><td>${esc(fmtMonth(p.harvest))}</td></tr>`)
+    .join('');
+  const srcs = (d.sources ?? [])
+    .map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`)
+    .join('');
+  const verify = (d.verify_with ?? [])
+    .map(
+      (v) =>
+        `<li><strong>${esc(v.title?.[lang] ?? v.title?.en)}</strong>: ${esc(v.how?.[lang] ?? v.how?.en)} <a href="${esc(v.url)}" target="_blank" rel="noopener">source</a></li>`,
+    )
+    .join('');
+  $('food-result').innerHTML = `
+    <ul>${lines || '<li>-</li>'}</ul>
+    ${cropRows ? `<p><strong>${esc(t.foodCrops)}</strong></p>
+    <table><thead><tr><th>${esc(t.foodCrop)}</th><th>${esc(t.foodPlant)}</th><th>${esc(t.foodHarvest)}</th></tr></thead>
+    <tbody>${cropRows}</tbody></table>` : ''}
+    ${srcs ? `<p class="note"><strong>${esc(t.foodSources)}:</strong></p><ul class="note">${srcs}</ul>` : ''}
+    ${verify ? `<p class="note"><strong>${esc(t.foodVerify)}:</strong></p><ul class="note">${verify}</ul>` : ''}
+    <p class="warn">${esc(d.caveat ?? '')}</p>`;
+}
+
+async function doFood() {
+  const t = pt();
+  const lat = $('plat').value.trim();
+  const lon = $('plon').value.trim();
+  const ward = $('ward').value;
+  const dwelling = $('fdwelling').value;
+  const q = new URLSearchParams({ lang, dwelling, roof_material: $('fmat').value });
+  // A flat's roof is shared: only send a roof the user actually stated.
+  if (dwelling === 'house') q.set('roof', $('froof').value || '30');
+  else if (Number($('froof').value) > 0) q.set('roof', $('froof').value);
+  // Untouched household input = let the API apply the KNBS county default.
+  if (foodPeopleDirty) q.set('people', $('fpeople').value || '4');
+  // Follow the target the user touched last, never the other one.
+  if ((foodTarget === 'point' || !ward) && lat && lon) {
+    q.set('lat', lat);
+    q.set('lon', lon);
+  } else if (ward) {
+    q.set('ward', ward);
+  } else {
+    $('food-status').textContent = t.foodNeed;
+    return;
+  }
+  $('food-status').textContent = t.loading;
+  try {
+    const res = await fetch(`/food-security?${q}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    lastFood = await res.json();
+    $('food-status').textContent = '';
+    renderFood(lastFood);
+  } catch (err) {
+    $('food-status').textContent = `${t.err} ${String(err.message)}`;
   }
 }
 
@@ -693,6 +946,113 @@ function doGeolocate() {
 $('geolocate').addEventListener('click', doGeolocate);
 $('plookup').addEventListener('click', doLookup);
 $('pkitchen').addEventListener('click', doKitchen);
+$('pskill').addEventListener('click', doSkill);
+$('bfood').addEventListener('click', doFood);
+let foodPeopleDirty = false;
+$('fpeople').addEventListener('input', () => { foodPeopleDirty = true; });
+let roofKeep = '30';
+$('fdwelling').addEventListener('change', () => {
+  const flat = $('fdwelling').value === 'flat';
+  if (flat) {
+    roofKeep = $('froof').value || '30';
+    $('froof').value = '0';
+    $('food-status').textContent = pt().flatRoofNote;
+  } else {
+    $('froof').value = roofKeep;
+    $('food-status').textContent = '';
+  }
+  $('froof').disabled = flat;
+  if (lastFood) doFood();
+});
+
+// Two plain questions replace the four-word aspect dropdown: midday sun and
+// morning sun map onto the kitchen module's aspect categories, and "not sure"
+// stays honest as unknown.
+function syncAspect() {
+  const noon = $('pnoon').value;
+  const morning = $('pmorning').value;
+  $('paspect').value =
+    noon === 'unsure' || morning === 'unsure'
+      ? 'unknown'
+      : noon === 'sun' && morning === 'sun'
+        ? 'full_sun'
+        : morning === 'sun'
+          ? 'morning_sun'
+          : noon === 'sun'
+            ? 'afternoon_shade'
+            : 'shaded';
+}
+$('pnoon').addEventListener('change', syncAspect);
+$('pmorning').addEventListener('change', syncAspect);
+syncAspect();
+
+// Measure the footprint, not the slope: length x width fills the area field.
+function syncRoofArea() {
+  const L = Number($('froofL').value);
+  const W = Number($('froofW').value);
+  if (Number.isFinite(L) && Number.isFinite(W) && L > 0 && W > 0) {
+    $('froof').value = String(Math.round(L * W));
+  }
+}
+$('froofL').addEventListener('input', syncRoofArea);
+$('froofW').addEventListener('input', syncRoofArea);
+syncRoofArea();
+
+$('fmat').addEventListener('change', () => {
+  const t = pt();
+  const m = $('fmat').value;
+  $('food-status').textContent = m === 'thatch' ? t.thatchNote : m === 'tiles' ? t.tilesNote : '';
+  if (lastFood) doFood();
+});
+
+// Photo assist: the one photo question whose answer changes the water plan.
+$('bphoto').addEventListener('click', () => $('fphoto').click());
+$('fphoto').addEventListener('change', async () => {
+  const t = pt();
+  const file = $('fphoto').files?.[0];
+  if (!file) return;
+  $('food-status').textContent = t.photoWorking;
+  try {
+    const data = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result));
+      fr.onerror = () => reject(new Error('could not read the file'));
+      fr.readAsDataURL(file);
+    });
+    const res = await fetch('/photo-roof', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ image: data }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = await res.json();
+    const map = { iron_sheet: 'iron', tiles: 'tiles', thatch: 'thatch' };
+    if (map[j.material]) $('fmat').value = map[j.material];
+    $('food-status').textContent = t.photoDone(j.material, j.confidence);
+    if (lastFood) doFood();
+  } catch {
+    $('food-status').textContent = t.photoFail;
+  } finally {
+    $('fphoto').value = '';
+  }
+});
+
+async function shareFood() {
+  if (!lastFood) return;
+  const t = pt();
+  const txt = `${(lastFood.lines ?? []).join('\n')}\n\n${lastFood.caveat ?? ''}\nMsimu: https://msimu.shikunyi.workers.dev`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ text: txt });
+      return;
+    }
+    await navigator.clipboard.writeText(txt);
+    $('food-status').textContent = t.shareCopied;
+  } catch (err) {
+    if (err?.name !== 'AbortError') $('food-status').textContent = t.shareFailed;
+  }
+}
+$('bshare').addEventListener('click', shareFood);
 for (const id of ['sw', 'en']) $(id).addEventListener('click', ptLabels);
 ptLabels();
 </script>

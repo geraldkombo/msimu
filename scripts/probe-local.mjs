@@ -70,6 +70,8 @@ try {
     check('dashboard loads boundary files lazily per county', homeBody.includes('boundaries/'));
     check('no county is hardcoded into the dashboard', !homeBody.includes('kajiado-wards.geojson'));
     check('dashboard has legend + attribution nodes', homeBody.includes('id="legend"') && homeBody.includes('id="ward-attrib"'));
+    check('dashboard has the food-security planner', homeBody.includes('id="bfood"') && homeBody.includes('id="fdwelling"') && homeBody.includes('id="bshare"') && homeBody.includes('id="fmat"') && homeBody.includes('id="bphoto"') && homeBody.includes('id="pnoon"') && homeBody.includes('/food-security?'));
+    check('dashboard defaults to English', homeBody.includes('id="en" aria-pressed="true"') && homeBody.includes("let lang = 'en'"));
     check('dashboard attributes geoBoundaries', homeBody.includes('geoBoundaries'));
     check('dashboard discloses borrowed ERA5 cells', /nearestCell/.test(homeBody));
 
@@ -155,10 +157,19 @@ try {
     check('POST /ussd answers a menu selection for a ward', ussd.ok && /^(CON|END) /.test(ub.trim()), `status ${ussd.status}, ${ub.trim().slice(0, 40)}`);
     check('farmer USSD shows no millimetres', !/\d+\s*mm/.test(ub), ub.match(/\d+\s*mm/)?.[0] ?? 'clean');
 
+    const ussdFood = await fetch(`${base}/ussd`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'text=4&ward=kajiado--nkaimurunya',
+    });
+    const ufb = await ussdFood.text();
+    check('USSD option 4 returns the food and water plan', ussdFood.ok && /^END /.test(ufb.trim()) && /chakula|Food|mpango|plan/i.test(ufb), ufb.trim().slice(0, 50));
+    check('USSD food screen fits one screen', ufb.length <= 330, `${ufb.length} chars`);
+
     const health = await (await fetch(`${base}/health`)).json();
     check('GET /health lists sites', Array.isArray(health?.sites) && health.sites.includes('gataka'), JSON.stringify(health?.sites ?? null));
     check('GET /health reports country coverage', health?.coverage?.counties === 47 && health?.coverage?.wards === 1452, JSON.stringify(health?.coverage ?? null));
-    check('GET /health advertises the point routes', (health?.routes ?? []).some((r) => r.startsWith('/locate')) && (health?.routes ?? []).some((r) => r.startsWith('/kitchen')), (health?.routes ?? []).length + ' routes');
+    check('GET /health advertises the point routes', (health?.routes ?? []).some((r) => r.startsWith('/locate')) && (health?.routes ?? []).some((r) => r.startsWith('/kitchen')) && (health?.routes ?? []).some((r) => r.startsWith('/skill')), (health?.routes ?? []).length + ' routes');
 
     // Precise point lookup: coordinate in, administrative unit out.
     const locate = await fetch(`${base}/locate?lat=-1.28496&lon=36.89468`);
@@ -197,6 +208,65 @@ try {
 
     const kitchenBad = await fetch(`${base}/kitchen?lat=-1.28496&lon=36.89468&tercile=bogus`);
     check('/kitchen validates the tercile', kitchenBad.status === 400, `status ${kitchenBad.status}`);
+
+    const skill = await fetch(`${base}/skill?lat=-1.4275&lon=36.6865&days=3`);
+    const sj = await skill.json().catch(() => null);
+    check('GET /skill returns the model accuracy scoreboard', skill.ok && (sj?.models?.length ?? 0) > 0 && sj?.data_status === 'live_verification', `status ${skill.status}, ${sj?.models?.length ?? 0} models scored`);
+    check('scoreboard names its rank metric and its best model', Boolean(sj?.best_short_range?.label) && /mean absolute error/.test(sj?.rank_metric ?? ''), sj?.best_short_range ? `${sj.best_short_range.label} ${sj.best_short_range.mean_mae_mm}mm` : 'none');
+    check('scoreboard keeps the not-a-rain-gauge caveat attached', /not a rain gauge/.test(sj?.caveat ?? ''), sj?.caveat ? 'caveat present' : 'MISSING');
+    check('scoreboard reports the observed window itself', Number.isFinite(sj?.observed_total_mm) && Object.keys(sj?.observed_daily_mm ?? {}).length === 3, `total ${sj?.observed_total_mm} mm, ${sj?.wet_days ?? '?'} wet days`);
+    const skillBad = await fetch(`${base}/skill?lat=-1.4275&lon=36.6865&days=999`);
+    check('/skill validates the window length', skillBad.status === 400, `status ${skillBad.status}`);
+
+    const foodWard = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&roof=30&people=4&lang=en`);
+    const fw = await foodWard.json().catch(() => null);
+    check('GET /food-security builds a ward household plan', foodWard.ok && fw?.data_status === 'planning_heuristic' && (fw?.lines?.length ?? 0) > 2, `status ${foodWard.status}, ${fw?.lines?.length ?? 0} lines`);
+    check('ward plan uses the normals-based lean analysis', fw?.lean?.basis === 'rain_vs_et0_normals' && Number.isFinite(fw?.lean?.longest_streak), `${fw?.lean?.basis ?? '?'} streak ${fw?.lean?.longest_streak ?? '?'}`);
+    check('the plan ships its Kenyan dataset sources', (fw?.sources ?? []).length >= 6 && (fw?.sources ?? []).some((s) => /spherestandards/.test(s.url ?? '')), `${(fw?.sources ?? []).length} sources`);
+
+    const foodPoint = await fetch(`${base}/food-security?lat=-1.28496&lon=36.89468&lang=en&roof=0&people=2`);
+    const fp = await foodPoint.json().catch(() => null);
+    check('point plans degrade honestly to tercile_only', foodPoint.ok && fp?.lean?.basis === 'tercile_only', `status ${foodPoint.status}, basis ${fp?.lean?.basis ?? '?'}`);
+
+    const foodDefault = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&lang=en`);
+    const fd = await foodDefault.json().catch(() => null);
+    check('household size defaults to the KNBS 2019 county mean, rounded up', foodDefault.ok && fd?.people_basis === 'knbs_2019_county' && fd?.inputs?.people === 4, `basis ${fd?.people_basis ?? '?'}, people ${fd?.inputs?.people ?? '?'}`);
+    check('an explicit people= overrides the county default', fp?.people_basis === 'requested' && fp?.inputs?.people === 2, `basis ${fp?.people_basis ?? '?'}`);
+
+    const foodFlat = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&dwelling=flat&lang=en`);
+    const ff = await foodFlat.json().catch(() => null);
+    check('flat dwellers get a bought-water plan, not a tank they cannot fill', foodFlat.ok && ff?.inputs?.dwelling === 'flat' && ff?.inputs?.roof_m2 === 0 && (ff?.lines ?? []).some((l) => /boil or treat/.test(l)), `dwelling ${ff?.inputs?.dwelling ?? '?'}, roof ${ff?.inputs?.roof_m2 ?? '?'}`);
+    check('the flat plan swaps the private-roof chore for containers', !(ff?.lines ?? []).some((l) => /Clean the roof/.test(l)) && (ff?.lines ?? []).some((l) => /containers/.test(l)));
+    const foodDwellBad = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&dwelling=castle`);
+    check('/food-security validates the dwelling type', foodDwellBad.status === 400, `status ${foodDwellBad.status}`);
+
+    const foodThatch = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&roof_material=thatch&lang=en`);
+    const ft = await foodThatch.json().catch(() => null);
+    check('a thatch roof sends the plan down the bought-water route', foodThatch.ok && ft?.inputs?.roof_m2 === 0 && (ft?.lines ?? []).some((l) => /thatch roof cannot harvest/.test(l)), `roof ${ft?.inputs?.roof_m2 ?? '?'}`);
+    const foodMatBad = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&roof_material=gold`);
+    check('/food-security validates the roof material', foodMatBad.status === 400, `status ${foodMatBad.status}`);
+    check('the plan ships the verification desk', (fw?.verify_with ?? []).length >= 4 && (fw?.verify_with ?? []).some((v) => v.id === 'kephis_seed') && Boolean(fw?.verify_with?.[0]?.how?.sw), `${(fw?.verify_with ?? []).length} desk entries`);
+
+    const photoBad = await fetch(`${base}/photo-roof`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: 'not-a-data-url' }) });
+    check('POST /photo-roof validates the image payload', photoBad.status === 400, `status ${photoBad.status}`);
+    const photoTiny = await fetch(`${base}/photo-roof`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' }),
+    });
+    const pj = await photoTiny.json().catch(() => null);
+    check('POST /photo-roof answers or admits the free lane shed', [200, 429, 503].includes(photoTiny.status) && (photoTiny.status !== 200 || ['iron_sheet', 'tiles', 'thatch', 'other'].includes(pj?.material)), `status ${photoTiny.status}, material ${pj?.material ?? '-'}`);
+
+    const foodSw = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&lang=sw`);
+    const fsw = await foodSw.json().catch(() => null);
+    check('food plan localises to Swahili', foodSw.ok && (fsw?.lines ?? []).some((l) => /Mpango wa usalama wa chakula/.test(l)), String(fsw?.lines?.[0] ?? 'none').slice(0, 60));
+
+    const foodBad = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&roof=99999`);
+    check('/food-security validates the roof size', foodBad.status === 400, `status ${foodBad.status}`);
+    const foodBad2 = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&people=0`);
+    check('/food-security validates the household size', foodBad2.status === 400, `status ${foodBad2.status}`);
+
+    check('GET /health advertises /food-security', (health?.routes ?? []).some((r) => r.startsWith('/food-security')), `${(health?.routes ?? []).length} routes`);
 
     const missing = await fetch(`${base}/nope`);
     check('unknown route 404s', missing.status === 404, `status ${missing.status}`);

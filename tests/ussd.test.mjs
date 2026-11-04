@@ -75,6 +75,39 @@ test('option 3 credits the data source and flags pilot status', () => {
   assert.ok(r.body.includes('afisa kilimo'), 'must refer to the ward extension officer');
 });
 
+test('the menu advertises option 4, the food and water plan, in both locales', () => {
+  assert.ok(ussdMenu({ site, locale: 'sw' }).includes('4. Mpango wa chakula na maji'));
+  assert.ok(ussdMenu({ site, locale: 'en' }).includes('4. Food and water plan'));
+});
+
+test('option 4 returns food-plan lines and ends the session', () => {
+  const food = { lines: ['Mpango wa usalama wa chakula wa Gataka.', 'Hali: jiandae sasa.', 'Safisha paa kabla ya mvua.', 'Hifadhi lita 1000.', 'Mstari wa tano hauingii.'] };
+  for (const locale of ['sw', 'en']) {
+    const r = ussdResponse('4', { site, advisory: advisory(locale), outlook, crops, food, locale });
+    assert.equal(r.end, true);
+    assert.ok(r.body.includes(food.lines[0]), 'the plan title must lead the screen');
+    assert.ok(!r.body.includes('Mstari wa tano'), 'never more than four lines');
+    assert.ok(r.body.length <= 320, `screen too long (${r.body.length} chars)`);
+  }
+});
+
+test('option 4 packs whole lines within the screen budget and never truncates mid-line', () => {
+  const long = { lines: ['A'.repeat(140), 'B'.repeat(140), 'C'.repeat(140)] };
+  const r = ussdResponse('4', { site, advisory: advisory('sw'), outlook, crops, food: long, locale: 'sw' });
+  assert.equal(r.end, true);
+  assert.ok(r.body.length <= 320, `screen too long (${r.body.length} chars)`);
+  assert.ok(r.body.includes('A'.repeat(140)) && r.body.includes('B'.repeat(140)), 'whole lines only');
+  assert.ok(!r.body.includes('C'), 'the line that does not fit is dropped whole');
+});
+
+test('option 4 without a plan says so honestly instead of inventing one', () => {
+  for (const locale of ['sw', 'en']) {
+    const r = ussdResponse('4', { site, advisory: advisory(locale), outlook, crops, locale });
+    assert.equal(r.end, true);
+    assert.ok(locale === 'sw' ? r.body.includes('Hakuna mpango') : r.body.includes('No food plan'), `got: ${r.body}`);
+  }
+});
+
 test('unknown input is handled, not crashed on', () => {
   for (const t of ['9', 'abc', '1.2', '*']) {
     const r = run(t);
@@ -94,7 +127,7 @@ test('every USSD screen stays within a single-screen budget', () => {
   const levels = Object.keys(i18n.sw.levels);
   assert.ok(levels.length > 0);
   for (const locale of ['sw', 'en']) {
-    for (const t of ['', '1', '2', '3', '9']) {
+    for (const t of ['', '1', '2', '3', '4', '9']) {
       const body = run(t, locale).body;
       assert.ok(body.length <= 320, `${locale} screen "${t}" is too long for USSD (${body.length} chars)`);
     }

@@ -6,12 +6,11 @@ Msimu turns a raw seasonal climate forecast into a specific instruction a smallh
 
 Most climate products in the region are dashboards. They show rainfall to a user who then has to do the agronomy themselves. Msimu does the agronomy and delivers the decision.
 
-<!-- Replace OWNER with your GitHub username, then delete this comment. -->
-[![CI](https://github.com/OWNER/msimu/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/msimu/actions/workflows/ci.yml)
+[![CI](https://github.com/geraldkombo/msimu/actions/workflows/ci.yml/badge.svg)](https://github.com/geraldkombo/msimu/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Dependencies: zero](https://img.shields.io/badge/dependencies-zero-brightgreen)](./package.json)
 
-**Live:** <https://msimu.shikunyi.workers.dev> - dashboard, JSON API and USSD endpoint on one Cloudflare Worker. Country-wide build (version `8cbfc681`, deployed 2026-10-29) verified with `npm run probe:live` (59/59 checks).
+**Live:** <https://msimu.shikunyi.workers.dev> - dashboard, JSON API and USSD endpoint on one Cloudflare Worker. Country-wide build on the finished 403-cell normals pack (version `0d99597b`, built 2026-11-04: food-security plan with KNBS county household defaults, flat-dweller mode, roof length x width with material and photo check, the verification desk, WhatsApp sharing, English-first dashboard, USSD food screen) verified with `npm run probe:live` (103/103 checks).
 
 ---
 
@@ -20,7 +19,7 @@ Most climate products in the region are dashboards. They show rainfall to a user
 No `npm install`. There is nothing to install - the engine uses only Node built-ins.
 
 ```bash
-node --test "tests/*.test.mjs"                 # 84 tests, all offline, no network
+node --test "tests/*.test.mjs"                 # 156 tests, all offline, no network
 node src/cli.mjs --ward kajiado--nkaimurunya   # live advisory for any ward in Kenya
 ```
 
@@ -35,8 +34,8 @@ node src/cli.mjs --site gataka --irrigation                 # assume irrigation 
 node src/cli.mjs --site gataka --json                       # machine-readable
 node scripts/smoke-worker.mjs                               # exercise every HTTP + USSD route
 npm run verify-bands                                        # leave-one-out verification of the tercile bands
-npm run probe                                               # 59 end-to-end HTTP checks: dashboard + API + USSD
-npm run probe:live                                          # the same 59 checks against the deployed Worker
+npm run probe                                               # 103 end-to-end HTTP checks: dashboard + API + USSD
+npm run probe:live                                          # the same 103 checks against the deployed Worker
 npm run deploy:dry                                          # bundle check, no upload (needs wrangler login)
 npm run deploy                                              # deploy Worker + dashboard assets to Cloudflare
 npm run serve                                               # dashboard + API on http://localhost:8080
@@ -114,6 +113,14 @@ The pilot site's coordinates were sent to a free, keyless API that has never bee
 
 Reproduce it yourself: `node src/cli.mjs --site gataka`.
 
+### The accuracy scoreboard: published, rolling, free
+
+Msimu publishes the number the industry does not: a live model-accuracy scoreboard. `GET /skill?lat=...&lon=...&days=7` (also by ward or site) reconstructs what five global models - ECMWF IFS 0.25, NOAA GFS, DWD ICON, MeteoFrance, UKMO - said *before* the rain, from the free Open-Meteo Previous Runs API, and scores it against what fell over a rolling window ending yesterday. Every payload ranks models by mean absolute error in millimetres, reports CSI alongside it, flags when the categorical score saturates, names the reference series as an analysis blend and not a rain gauge, and refuses to report a score if the lead-time offsets look unparsed (identical totals across leads are rejected as an artifact). The dashboard has a button for it; the CLI equivalent is `scripts/verify-event.mjs`. Both share one pure scoring core, `src/skill.mjs`, so the API and the CLI can never drift apart. Example live output for Kiserian over 25-31 October 2026: DWD ICON best at 0-2 day leads (1.76 mm mean error), ECMWF worst on bias (+2.87 mm) - the opposite of its one-event win on 30-31 October, which is exactly why a rolling public scoreboard matters more than any single table.
+
+### The food-security plan: surviving the lean season
+
+`GET /food-security?ward=<slug>` (or `?lat=&lon=`, plus `roof=` m2 and `people=`) turns the same outlook into a household survival plan: a stance (prepare now / caution / good season), the lean-month calendar, a planting window with plant-by and harvest months for every hardy staple, and a drinking-water storage size computed from roof catchment. It is the lockdown-lesson safety net: buffer water, bridge the hungry months, buy before prices rise, dry and store properly, and grow in containers when there is no land. Wards get the full analysis - lean months measured from the cell's 20-year rain median versus ET0 median, circular longest streak included - and the wet-month rule follows the FAO Kenya AEZ growing-period definition (rain >= 0.5 x ET0, floor 30 mm). Points without precomputed normals degrade honestly to `basis: tercile_only`. `roof=0` is valid: bought-water households get a storage number instead of a tank size. Every constant is backed by a public Kenyan or authoritative dataset (Sphere 15 L/person/day, KNBS 2019 average household size 3.9, KEPHIS/KALRO maturity windows, FEWS NET/NDMA lean-season calendars), mapped with verbatim evidence in `docs/FOOD-SECURITY-SOURCES.md` and shipped inside every payload as `sources`. The payload keeps `data_status: planning_heuristic` and its caveat attached: a planning tool, never a guarantee. When `people=` is omitted the plan defaults to the KNBS 2019 county household mean rounded up (Nairobi 3, Kajiado 4, Mandera 7; national 4 when the county is unknown) and records the basis in `people_basis` - table and provenance in `docs/knbs-2019-household-size-by-county.md`. `dwelling=flat` is the reality for most urban Kenya: the roof is shared, so the plan drops the private-roof chores, runs the bought-water storage route (or a stated roof share), always offers the container-growing line, and adds a boil-or-treat water-safety line; `inputs.dwelling` echoes the choice. The dashboard is English-first with a SW/EN switch, a dwelling selector, auto-rebuild when the ward or point target changes (no stale plans for the wrong location), readable month names in the planting table, and a Share button that hands the plan to WhatsApp/SMS via the Web Share API with clipboard fallback. USSD option 4 serves the same plan on a feature phone within one screen. `roof_material=` (iron, tiles, thatch) gates the harvesting route: thatch cannot harvest water at all, so the plan switches to bought water and says so in plain words, and the dashboard takes roof size as length x width of the footprint, not the slope. `POST /photo-roof` answers the one photo question that changes the plan - what the roof is made of - through free keyless vision models, enum-locked to four answers, labelled `photo_estimate`, and confirmed by the user's own eyes; when the lane sheds, the dashboard falls back to picking the material by hand. And because "confirm with your ward extension officer" is useless unless the household knows who that is, every plan ships `verify_with`: the sub-county agriculture office, the KEPHIS certified-seed sticker check, the KALRO variety selector, the NDMA drought bulletin and county-published contact pages, all from saved public sources with no invented phone numbers (`docs/KENYA-VERIFICATION-DESK.md`).
+
 ### Two statistical decisions worth defending
 
 **1. Anomaly is measured against the median, not the mean.** Rainfall at this site is strongly right-skewed. November's 20-year record has p33 = 81 mm, **mean = 99 mm**, p67 = 90 mm, max = 357 mm - one extreme year pulls the mean *above* the upper tercile. Against the mean, a 96 mm November reads "-2 %, below average" while the tercile method correctly calls it above-normal. Reporting both would contradict itself, so the engine classifies by tercile (the WMO-standard, distribution-based method) and reports anomaly against the median, which agrees with it in sign. This is regression-tested in `tests/climate.test.mjs`.
@@ -151,7 +158,7 @@ Reproduce: `npm run verify-bands` - add `--json` for machine-readable output, or
 
 The dashboard covers the whole country: pick any of the 47 counties and it draws that county's wards from a per-county geoBoundaries ADM3 file (CC BY 4.0, full resolution rounded to 5 decimals, heaviest county file 140 KB, so a phone on mobile data never downloads the 3 MB national layer). Every ward is coloured by its next usable month's tercile, from a single `/county-outlook` call per county.
 
-Colouring every polygon is honest here because every ward does have a computed outlook - but the map still refuses to overstate *where* the numbers come from. ERA5 resolves climate at 0.25 degrees (~25 km), so wards are snapped to grid cells: 365 wards sit on their own cell, 1087 currently borrow the nearest built cell and say so in the popup, the table note and the API (`cell.source`, `cell.distance_km`). A ward whose cell has no normals is grey and labelled "no data yet" rather than guessed. Filling the remaining cells is `npm run normals`, which is resumable, and the map upgrades itself with no code change.
+Colouring every polygon is honest here because every ward does have a computed outlook - but the map still refuses to overstate *where* the numbers come from. ERA5 resolves climate at 0.25 degrees (~25 km), so wards are snapped to grid cells: all 1,452 wards now sit on their own cell (403 of 403 cells built 1 November 2026). The borrow-nearest machinery stays in place for any future gap and labels itself in the popup, the table note and the API (`cell.source`, `cell.distance_km`). A ward whose cell has no normals is grey and labelled "no data yet" rather than guessed. `npm run normals` is resumable, and the map upgrades itself with no code change.
 
 ---
 
@@ -179,15 +186,22 @@ Every stage is a pure function over plain data. No database, no framework, no bu
 | `src/packs.mjs` | curated site and crop data packs |
 | `src/wards.mjs` | all 1452 wards: slug/id/county-name resolution, ERA5 cell lookup, agro-ecology zone, ward site objects |
 | `src/verification.mjs` | leave-one-out band verification, Heidke Skill Score, short-baseline sensitivity |
-| `worker/index.mjs` | Cloudflare Worker: `/health`, `/counties`, `/wards`, `/county-outlook`, `/forecast`, `/advisory`, `POST /ussd` |
-| `web/index.html` | Extension-officer dashboard: county and ward pickers, Leaflet ward choropleth + OpenStreetMap, 7-month table, SW/EN, no build step |
+| `src/skill.mjs` | pure model-skill core: rolling windows, Previous Runs scoring, CSI/MAE, artifact refusal, public scoreboard payload |
+| `src/foodsecurity.mjs` | pure food-security planning core: lean-month analysis, FAO half-ET0 wet windows, staple planting plan, roof-catchment water plan, dwelling-aware lines (house vs flat), bilingual lines, dataset sources |
+| `src/households.mjs` | KNBS 2019 average household size per county: default `people` for the food plan, rounded up, with the basis recorded in every payload |
+| `src/helpdesk.mjs` | the verification desk: who confirms the plan (sub-county agriculture office, KEPHIS seed sticker check, KALRO selector, NDMA bulletin, county contacts page), bilingual, linked, no invented phone numbers; shipped as `verify_with` in every food payload |
+| `worker/index.mjs` | Cloudflare Worker: `/health`, `/counties`, `/wards`, `/county-outlook`, `/locate`, `/forecast`, `/advisory`, `/kitchen`, `/skill`, `/food-security`, `POST /photo-roof`, `POST /ussd` (12 routes) |
+| `web/index.html` | Extension-officer dashboard: county and ward pickers, Leaflet ward choropleth + OpenStreetMap, 7-month table, point lookup, kitchen-garden advice, model accuracy scoreboard, food-security planner, SW/EN, no build step |
 | `web/boundaries/*.geojson` | 47 county ward files + a simplified national county layer, geoBoundaries CC BY 4.0, attribution stamped in each file |
 | `web/data/wards-index.json` | dashboard registry: counties, ward slugs and their ERA5 cells (no geometry) |
 | `data/wards.json` | the climate pack: ERA5 2005-2024 normals and tercile bands per 0.25-degree cell, plus every ward's cell assignment |
 | `scripts/fetch-boundaries.mjs` | Reproducible country-wide boundary fetch: ADM1/ADM2/ADM3, county split, attribution stamping, cached downloads |
 | `scripts/build-normals.mjs` | Builds ERA5 normals per grid cell, resumable and cached, with nearest-cell fallback labelled by distance |
 | `scripts/check-wards.mjs` | Offline integrity check: 47 counties, 1452 wards, licences, sizes, precision, pack coverage |
-| `scripts/probe-local.mjs` | 59 end-to-end HTTP checks against the local server or the deployed Worker (`--base`) |
+| `scripts/probe-local.mjs` | 103 end-to-end HTTP checks against the local server or the deployed Worker (`--base`) |
+| `docs/FOOD-SECURITY-SOURCES.md` | every food-security constant and gate mapped to its Kenyan dataset, with verbatim evidence and fetch dates |
+| `docs/KENYA-VERIFICATION-DESK.md` | every verification-desk entry mapped to its public, fetchable source, with fetch dates |
+| `docs/knbs-2019-household-size-by-county.md` | KNBS 2019 census household-size table for all 47 counties behind the `people=` defaults, with provenance |
 | `scripts/dedash.mjs` | House-style sweeper: no em dash, en dash or unicode minus anywhere (`--check` in CI) |
 | `scripts/serve-local.mjs` | Zero-dependency local server for the dashboard and API on one origin |
 | `scripts/verify-terciles.mjs` | Runs the verification against live ERA5 and prints the table above |
@@ -225,7 +239,7 @@ Stated plainly, because a climate service that overstates itself is worse than n
 - **The EFI/SOT parameters advertised in the docs did not resolve** on the free endpoint when probed on 2026-10-28. Msimu computes terciles itself from ERA5 and does not claim native EFI.
 - **20 years is a small sample.** Confidence is derived from sample size and labelled accordingly. Leave-one-out verification shows the bands are stable at 20 years and *not* stable at 10 (78.8 % agreement) - so the baseline length is load-bearing, and shrinking it would be a real regression.
 - **The verification measures the baseline, not the forecast.** `npm run verify-bands` reports band stability and Heidke Skill Score against a leave-one-out baseline. It is **NOT a measure of ECMWF SEAS5 forecast skill**, and no output, doc or slide should present it as one.
-- **Country-wide does not mean cell-wide.** Every one of the 1452 wards has an outlook, but only 96 of the 403 ERA5 grid cells over Kenya are built so far (Open-Meteo rate-limited the archive calls with HTTP 429). 365 wards sit on their own cell; 1087 borrow the nearest built cell, up to 308 km away in the worst case, and every response labels that (`cell.source`, `cell.distance_km`). `npm run normals` resumes where it stopped; nothing about the engine changes when the cache fills.
+- **Country-wide does not mean cell-wide.** Every one of the 1452 wards has an outlook, and the ERA5 cache is complete: 403 of 403 grid cells over Kenya, built 1 November 2026 across repeated rate-limit-aware runs (Open-Meteo meters the archive calls with HTTP 429; each run ends on the limit and `npm run normals` resumes from the cache). The final run exited with zero fetch failures, including the last frost-pass minimum-temperature fetch (cell 0.50,35.25, 2,087 m) that two earlier runs lost to the rate limit. Every ward sits on its own cell; the nearest-cell fallback, labelled with `cell.source` and `cell.distance_km`, stays in place for any future gap.
 - **Resolution is the model's, not the ward's.** ERA5 is a 0.25-degree reanalysis (~25 km). Wards smaller than a cell share that cell's climate, so Msimu reports terciles for an area and never claims a field-scale forecast.
 - **The agronomy is local, not generic.** Crop lists, maturity windows and the 44 % water-balance deficit come from Kajiado County sources for this specific sub-county. Elsewhere the zone classification (arid, semi-arid, sub-humid, humid, highland) and each cell's own water balance drive the same rules, but county-specific crop lists still need re-sourcing per county.
 - **No pilot users yet.** The engine runs and is verified against live data; farmer-facing delivery has not been field-tested. Do not claim pilot results that have not happened.
@@ -241,12 +255,12 @@ Stated plainly, because a climate service that overstates itself is worse than n
 - [x] Ward choropleth: all 47 counties and 1452 wards from geoBoundaries (CC BY 4.0), full-resolution per-county files, every ward coloured from one `/county-outlook` call
 - [x] Country-wide climate pack: ERA5 2005-2024 normals and tercile bands per 0.25-degree cell, ward-to-cell assignment, agro-ecology zones, nearest-cell provenance
 - [x] Leave-one-out verification of the tercile bands (agreement, Heidke Skill Score, short-baseline sensitivity, collapsed-band detection)
-- [x] Deployed to Cloudflare: <https://msimu.shikunyi.workers.dev> - Worker + dashboard assets on one origin, verified live with `npm run probe:live` (59/59)
+- [x] Deployed to Cloudflare: <https://msimu.shikunyi.workers.dev> - Worker + dashboard assets on one origin, verified live with `npm run probe:live` (103/103)
 - [x] House style enforced by code: `npm run dedash:check` fails the build if a long dash appears anywhere
-- [ ] Finish the ERA5 cell cache (96 of 403 cells built; `npm run normals` is resumable and rate-limit aware)
+- [x] Finish the ERA5 cell cache (403 of 403 cells built 1 November 2026; `npm run normals` is resumable and rate-limit aware)
 - [ ] County-specific crop packs beyond Kajiado, sourced per agro-ecological zone
 - [ ] Browser-verify the dashboard render and capture a screenshot (the API contract and served HTML are verified; the rendered pixels are not)
-- [ ] Extension-officer feedback view (farmer reply  D1  aggregated by ward)
+- [ ] Extension-officer feedback view (farmer replies aggregated by ward)
 - [ ] USSD sandbox walkthrough recording and screenshots
 - [ ] Native-speaker review of all Swahili strings
 - [ ] Maa and Kikuyu localization for pastoralist and mixed-farming communities

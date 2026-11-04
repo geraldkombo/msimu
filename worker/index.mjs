@@ -6,9 +6,111 @@ import { crops, getSite, siteIds } from '../src/packs.mjs';
 import { counties as allCounties, wardsForCounty, resolveWard, wardSite, cellFor, coverage as wardCoverage } from '../src/wards.mjs';
 import { locatePoint, pointSite, workerGeometryLoader } from '../src/point.mjs';
 import { buildKitchenAdvisory } from '../src/kitchen.mjs';
+import { buildFoodSecurityPlan } from '../src/foodsecurity.mjs';
+import { defaultHouseholdPeople } from '../src/households.mjs';
+import {
+  DEFAULT_MODELS,
+  rollingWindow,
+  scoreWindow,
+  skillScoreboard,
+  previousRunVariables,
+} from '../src/skill.mjs';
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const cache = new Map();
+
+/**
+ * Roof-material classification from a photo, via the keyless free vision lane
+ * (Kilo gateway, no account, no card). Bounded question, bounded answers: the
+ * model may only say iron_sheet, tiles, thatch or other, and its verdict is
+ * labelled a photo estimate the user confirms by eye. Every failure mode
+ * (rate limit, timeout, unparsable answer, next model down) falls through to
+ * null, and the route answers 503 so the dashboard tells the user to pick the
+ * material themselves. No key, no cost, no secrets.
+ */
+const ROOF_VISION_MODELS = [
+  // Free keyless vision lanes, probed live 4 November 2026. The dots model is a
+  // thinking model: it needs a large budget or the answer is swallowed by
+  // hidden reasoning (finish=length, content null), so it gets 1500 tokens and
+  // a retry. The Nemotron VL free lanes sit behind it: they either reason away
+  // small budgets or 422 with "media could not be screened", so they are a
+  // courtesy fallback, not the workhorse. The dots preview lane is published
+  // with a 2026-12-31 retirement date; when it goes, the chain degrades to the
+  // honest 503 and the dashboard's manual material pick.
+  { model: 'dots-studio/dots-3-note-preview:free', maxTokens: 1500, tries: 2 },
+  { model: 'nvidia/nemotron-3.5-super-vl:free', maxTokens: 900, tries: 1 },
+  { model: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', maxTokens: 900, tries: 1 },
+];
+const ROOF_MATERIALS = ['iron_sheet', 'tiles', 'thatch', 'other'];
+const ROOF_VISION_PROMPT =
+  'Classify the roof in this photo into exactly one material: iron_sheet, tiles, thatch, other. Reply with JSON only, no prose: {"material":"...","confidence":"low|medium|high"}';
+
+async function classifyRoofPhoto(image) {
+  const failures = [];
+  for (const { model, maxTokens, tries } of ROOF_VISION_MODELS) {
+    for (let attempt = 1; attempt <= tries; attempt += 1) {
+      try {
+        const res = await fetch('https://api.kilo.ai/api/gateway/chat/completions', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            max_tokens: maxTokens,
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: ROOF_VISION_PROMPT },
+                  { type: 'image_url', image_url: { url: image } },
+                ],
+              },
+            ],
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+        if (!res.ok) {
+          failures.push(`${model}:http_${res.status}`);
+          break;
+        }
+        const j = await res.json();
+        const finish = j?.choices?.[0]?.finish_reason ?? 'none';
+        let raw = j?.choices?.[0]?.message?.content;
+        if (Array.isArray(raw)) raw = raw.map((p) => (typeof p === 'string' ? p : p?.text ?? '')).join('');
+        raw = String(raw ?? '');
+        let parsed = null;
+        const found = /\{[\s\S]*\}/.exec(raw);
+        if (found) {
+          try {
+            parsed = JSON.parse(found[0]);
+          } catch {
+            parsed = null;
+          }
+        }
+        if (!parsed || !ROOF_MATERIALS.includes(parsed?.material)) {
+          const bare = /\b(iron_sheet|tiles|thatch|other)\b/.exec(raw);
+          if (bare) parsed = { material: bare[1], confidence: 'low' };
+        }
+        if (!parsed || !ROOF_MATERIALS.includes(parsed?.material)) {
+          failures.push(`${model}:no_verdict:${finish}`);
+          continue;
+        }
+        return {
+          result: {
+            material: parsed.material,
+            confidence: ['low', 'medium', 'high'].includes(parsed?.confidence) ? parsed.confidence : 'low',
+            model,
+            data_status: 'photo_estimate',
+          },
+          failures,
+        };
+      } catch (err) {
+        // shed, timeout or garbage: try again or fall through to the next model
+        failures.push(`${model}:${String(err?.message ?? err).slice(0, 40)}`);
+      }
+    }
+  }
+  return { result: null, failures };
+}
 
 /**
  * Live climate at an exact coordinate.
@@ -184,6 +286,80 @@ async function countyOutlook(countyRef) {
   return value;
 }
 
+/**
+ * Live model-skill scoreboard for any point, ward or site.
+ *
+ * Scores what five global models said BEFORE the rain against what fell, over a
+ * rolling window ending yesterday (today's analysis blend is still settling).
+ * Same pure core as scripts/verify-event.mjs, so the CLI and this route can
+ * never drift apart. Cached 6h: the reference analysis does not change inside
+ * an hour, so re-fetching would cost quota and buy nothing.
+ */
+async function skillFor({ lat, lon, label, ward, county, days, threshold, leadDays = 7 }) {
+  const win = rollingWindow({ days });
+  const key = `skill:${lat.toFixed(4)},${lon.toFixed(4)}:${win.endISO}:${days}:${threshold}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value;
+
+  const obsQs = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    daily: 'precipitation_sum',
+    start_date: win.startISO,
+    end_date: win.endISO,
+    timezone: 'auto',
+  });
+  const obsRes = await fetch(`https://api.open-meteo.com/v1/forecast?${obsQs}`);
+  if (!obsRes.ok) {
+    throw Object.assign(new Error(`open-meteo observed HTTP ${obsRes.status}`), { status: 502 });
+  }
+  const obsData = await obsRes.json();
+
+  const prQs = new URLSearchParams({
+    latitude: String(lat),
+    longitude: String(lon),
+    hourly: previousRunVariables(leadDays).join(','),
+    models: DEFAULT_MODELS.join(','),
+    start_date: win.startISO,
+    end_date: win.endISO,
+    timezone: 'auto',
+  });
+  const prRes = await fetch(`https://previous-runs-api.open-meteo.com/v1/forecast?${prQs}`);
+  if (!prRes.ok) {
+    throw Object.assign(new Error(`open-meteo previous-runs HTTP ${prRes.status}`), { status: 502 });
+  }
+  const previousRuns = await prRes.json();
+
+  const report = scoreWindow({
+    target: { lat, lon, label, county, ward },
+    startISO: win.startISO,
+    endISO: win.endISO,
+    observed: {
+      times: obsData.daily?.time ?? [],
+      values: obsData.daily?.precipitation_sum ?? [],
+      snapped: {
+        latitude: obsData.latitude ?? null,
+        longitude: obsData.longitude ?? null,
+        elevation_m: obsData.elevation ?? null,
+      },
+      source: 'Open-Meteo forecast API, daily precipitation_sum (best_match analysis)',
+    },
+    previousRuns,
+    leadDays,
+    threshold,
+  });
+
+  const value = {
+    place: { label, latitude: lat, longitude: lon, ward, county },
+    models_requested: DEFAULT_MODELS,
+    sanity: report.sanity,
+    ...skillScoreboard(report),
+    generated_at: new Date().toISOString(),
+  };
+  cache.set(key, { at: Date.now(), value });
+  return value;
+}
+
 export async function handle(request, env = {}) {
   const url = new URL(request.url);
   const siteId = url.searchParams.get('site') ?? 'gataka';
@@ -217,6 +393,9 @@ export async function handle(request, env = {}) {
           '/advisory?ward=kajiado--nkaimurunya&lang=sw',
           '/advisory?site=gataka&lang=sw',
           '/kitchen?lat=-1.28496&lon=36.89468&aspect=shaded&water=purchased&lang=en',
+          '/skill?lat=-1.4275&lon=36.6865&days=7',
+          '/food-security?ward=kajiado--nkaimurunya&roof=30&people=4&lang=en',
+          'POST /photo-roof',
           'POST /ussd',
         ],
         generated_at: new Date().toISOString(),
@@ -293,7 +472,25 @@ export async function handle(request, env = {}) {
         site: params.get('site') ?? siteId,
       });
       const { site, outlook, advisory } = await advisoryFor({ target, lang: params.get('lang') ?? lang, irrigation: false });
-      const result = ussdResponse(params.get('text') ?? '', { site, advisory, outlook, crops, locale: lang });
+      // USSD cannot ask for a roof size or household count, so option 4 plans
+      // with the standard 30 m2 roof and the KNBS county household default.
+      // A failure here must not take the menu down: food degrades to null.
+      let food = null;
+      try {
+        const { people } = defaultHouseholdPeople(site?.county ?? null);
+        food = buildFoodSecurityPlan({
+          site,
+          outlook,
+          crops,
+          roof_m2: 30,
+          people,
+          locale: lang,
+          now: new Date().toISOString().slice(0, 7),
+        });
+      } catch {
+        food = null;
+      }
+      const result = ussdResponse(params.get('text') ?? '', { site, advisory, outlook, crops, food, locale: lang });
       return text(`${result.end ? 'END' : 'CON'} ${result.body}`);
     }
 
@@ -348,7 +545,130 @@ export async function handle(request, env = {}) {
       });
     }
 
-    return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/locate', '/forecast', '/advisory', '/kitchen', '/ussd'] }, { status: 404 });
+    if (url.pathname === '/skill') {
+      const days = Number(url.searchParams.get('days') ?? '7');
+      if (!Number.isFinite(days) || days < 2 || days > 30) {
+        return json({ error: 'days must be a number from 2 to 30' }, { status: 400 });
+      }
+      const threshold = Number(url.searchParams.get('threshold') ?? '1');
+      if (!Number.isFinite(threshold) || threshold <= 0 || threshold > 50) {
+        return json({ error: 'threshold must be a number above 0 and at most 50 mm' }, { status: 400 });
+      }
+      let lat;
+      let lon;
+      let label = null;
+      let wardName = null;
+      let countyName = null;
+      if (url.searchParams.has('lat') || url.searchParams.has('lon')) {
+        lat = Number(url.searchParams.get('lat'));
+        lon = Number(url.searchParams.get('lon'));
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+          return json({ error: 'lat and lon must be numbers' }, { status: 400 });
+        }
+        const location = await locatePoint(lat, lon, workerGeometryLoader(url.origin, env?.ASSETS)).catch(() => null);
+        wardName = location?.ward ?? null;
+        countyName = location?.county ?? null;
+        label = wardName ? `${wardName} (${lat}, ${lon})` : `${lat}, ${lon}`;
+      } else {
+        const target = resolveTarget({ ward: wardRef, site: siteId });
+        const s = target.site;
+        if (!s) return json({ error: `unknown site "${siteId}"` }, { status: 404 });
+        lat = s.latitude;
+        lon = s.longitude;
+        label = s.name;
+        wardName = s.ward ?? null;
+        countyName = s.county ?? null;
+      }
+      return json(await skillFor({ lat, lon, label, ward: wardName, county: countyName, days, threshold }));
+    }
+
+    /**
+     * Household food-security plan: stance, lean months, planting window with
+     * harvest dates, and a water-storage size. Works for wards (full normals
+     * analysis), curated sites, and bare points (honest tercile_only degrade).
+     * roof=0 is valid: bought-water households get a storage number too.
+     */
+    if (url.pathname === '/food-security') {
+      const target = (await resolvePointTarget(url, env)) ?? resolveTarget({ ward: wardRef, site: siteId });
+      const { site, outlook } = await outlookFor(target);
+      const dwelling = url.searchParams.get('dwelling') ?? 'house';
+      if (!['house', 'flat'].includes(dwelling)) {
+        return json({ error: 'dwelling must be house or flat' }, { status: 400 });
+      }
+      const roofMaterial = url.searchParams.get('roof_material') ?? 'iron';
+      if (!['iron', 'tiles', 'thatch'].includes(roofMaterial)) {
+        return json({ error: 'roof_material must be iron, tiles or thatch' }, { status: 400 });
+      }
+      // A flat has no roof of its own: unless the caller states a shared-roof
+      // share, the plan runs the bought-water route instead of a tank size.
+      const roof = Number(url.searchParams.get('roof') ?? (dwelling === 'flat' ? '0' : '30'));
+      if (!Number.isFinite(roof) || roof < 0 || roof > 1000) {
+        return json({ error: 'roof must be a number of square metres from 0 to 1000' }, { status: 400 });
+      }
+      // An explicit people= always wins. Without it the plan defaults to the
+      // KNBS 2019 county household mean rounded up (national 4 when the county
+      // is unknown), and the payload says which basis was used.
+      let people;
+      let peopleBasis;
+      const peopleParam = url.searchParams.get('people');
+      if (peopleParam !== null && peopleParam !== '') {
+        people = Number(peopleParam);
+        if (!Number.isFinite(people) || people < 1 || people > 30) {
+          return json({ error: 'people must be a number from 1 to 30' }, { status: 400 });
+        }
+        peopleBasis = 'requested';
+      } else {
+        const county = (target.kind === 'point' ? target.location?.county : site?.county) ?? null;
+        const dflt = defaultHouseholdPeople(county);
+        people = dflt.people;
+        peopleBasis = dflt.basis;
+      }
+      const plan = buildFoodSecurityPlan({
+        site,
+        outlook,
+        crops,
+        roof_m2: roof,
+        people,
+        dwelling,
+        roof_material: roofMaterial,
+        locale: lang,
+        now: new Date().toISOString().slice(0, 7),
+      });
+      return json({
+        place:
+          target.kind === 'point'
+            ? { kind: 'point', latitude: site.latitude, longitude: site.longitude, ward: target.location?.ward ?? null, county: target.location?.county ?? null }
+            : target.kind === 'ward'
+              ? { kind: 'ward', id: site.id, ward: site.ward, county: site.county, sub_county: site.sub_county, agro_ecology: site.agro_ecology }
+              : { kind: 'site', id: siteId, name: site.name },
+        ...plan,
+        people_basis: peopleBasis,
+      });
+    }
+
+    /**
+     * Photo assist: what is the roof made of? The one photo question whose
+     * answer changes the water plan. Free keyless vision lane, enum-locked
+     * answers, honest fallback when the lane sheds.
+     */
+    if (url.pathname === '/photo-roof') {
+      if (request.method !== 'POST') return text('POST only', { status: 405 });
+      const body = await request.json().catch(() => null);
+      const image = String(body?.image ?? '');
+      if (!/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=\s]+$/.test(image) || image.length > 2000000) {
+        return json({ error: 'send {"image": "data:image/png;base64,..."} of at most about 1.5 MB' }, { status: 400 });
+      }
+      const { result, failures } = await classifyRoofPhoto(image);
+      if (!result) {
+        return json(
+          { error: 'photo check unavailable right now; pick the roof material yourself', detail: failures },
+          { status: 503 },
+        );
+      }
+      return json(result);
+    }
+
+    return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/locate', '/forecast', '/advisory', '/kitchen', '/skill', '/food-security', '/photo-roof', '/ussd'] }, { status: 404 });
   } catch (err) {
     return json(
       { error: String(err?.message ?? err), site: wardRef ? null : siteId, ward: wardRef ?? null },

@@ -12,8 +12,8 @@ export function isPlantingWindow(season) {
   return season === 'short_rains' || season === 'long_rains';
 }
 
-const TOLERANCE_RANK = { low: 0, medium: 1, high: 2, very_high: 3 };
-const MIN_TOLERANCE = { below: 2, near: 1, above: 0 };
+export const TOLERANCE_RANK = { low: 0, medium: 1, high: 2, very_high: 3 };
+export const MIN_TOLERANCE = { below: 2, near: 1, above: 0 };
 
 export function selectCrops({ tercile, month, waterBalancePct, irrigation = false, crops }) {
   const season = seasonForMonth(month);
