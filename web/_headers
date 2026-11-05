@@ -1,0 +1,11 @@
+# Security headers for every static asset the Worker serves.
+# CSP is deliberately tight: the page is one HTML file with inline script/style,
+# Leaflet from unpkg (SRI-pinned), OSM + Esri tiles, and same-origin API calls.
+# Nothing else is allowed to load, the page cannot be framed, and no plugin or
+# referrer surface is exposed. Verified in a real browser console on 5 Nov 2026.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: blob: https://unpkg.com https://tile.openstreetmap.org https://*.arcgisonline.com https://*.arcgis.com; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(self), camera=(), microphone=(), interest-cohort=()

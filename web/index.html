@@ -59,10 +59,10 @@
   button { cursor: pointer; font-weight: 650; }
   button:hover, select:hover { border-color: var(--leaf); }
   button[aria-pressed="true"] { background: var(--leaf); border-color: var(--leaf); color: #fff; }
-  #bfood, #plookup, #geolocate, #pkitchen, #pskill, #bphoto, #bshare {
+  #bfood, #plookup, #geolocate, #pkitchen, #pskill, #bphoto, #bsat, #bshare {
     background: var(--leaf); border-color: var(--leaf); color: #fff;
   }
-  #bfood:hover, #plookup:hover, #geolocate:hover, #pkitchen:hover, #pskill:hover, #bphoto:hover, #bshare:hover {
+  #bfood:hover, #plookup:hover, #geolocate:hover, #pkitchen:hover, #pskill:hover, #bphoto:hover, #bsat:hover, #bshare:hover {
     background: var(--leaf-dark); border-color: var(--leaf-dark);
   }
   input[type="checkbox"] { accent-color: var(--leaf); width: 15px; height: 15px; }
@@ -95,6 +95,25 @@
   .verdict :focus-visible { outline-color: rgba(240, 237, 225, 0.55); }
 
   #map { height: 316px; border-radius: 10px; border: 1px solid var(--line); }
+  .cardhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .cardhead h2 { margin: 0; }
+  .you-dot {
+    width: 16px; height: 16px; border-radius: 50%; background: #2278a8; border: 3px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45); animation: pulse 2.2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(34, 120, 168, 0.55), 0 1px 4px rgba(0, 0, 0, 0.45); }
+    70% { box-shadow: 0 0 0 15px rgba(34, 120, 168, 0), 0 1px 4px rgba(0, 0, 0, 0.45); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 120, 168, 0), 0 1px 4px rgba(0, 0, 0, 0.45); }
+  }
+  @media (prefers-reduced-motion: reduce) { .you-dot { animation: none; } }
+  .leaflet-tooltip.ward-tip {
+    background: var(--forest); color: #f0ede1; border: 0; border-radius: 6px;
+    font-weight: 650; font-size: 12px; padding: 4px 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  }
+  .leaflet-tooltip.ward-tip::before { display: none; }
+  .leaflet-container { font: inherit; }
+  .leaflet-popup-content-wrapper { border-radius: 10px; }
   .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--ink-2); margin-top: 10px; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; border: 1px solid rgba(32, 26, 18, 0.18); }
@@ -124,6 +143,10 @@
   @media (prefers-reduced-motion: reduce) { .strip .barfill { animation: none; } }
 
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  /* Phones: the 7-month table keeps its columns and scrolls sideways inside its
+     card instead of stretching the whole page (fixed 5 Nov after a 360px test). */
+  #table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #point-result, #food-result { overflow-x: auto; }
   th, td { text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
   th:first-child, td:first-child { text-align: left; }
   th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); font-weight: 700; }
@@ -230,7 +253,13 @@
 
   <div class="grid">
     <section class="card">
-      <h2 id="h-map">Ramani ya kaunti</h2>
+      <div class="cardhead">
+        <h2 id="h-map">Ramani ya kaunti</h2>
+        <div class="switch">
+          <button id="base-street" type="button" aria-pressed="true">Ramani</button>
+          <button id="base-sat" type="button" aria-pressed="false">Satelaiti</button>
+        </div>
+      </div>
       <div id="map" role="img" aria-label="County ward map"></div>
       <div id="legend" class="legend" hidden></div>
       <p class="note" id="map-note" style="margin-top:10px"></p>
@@ -274,6 +303,7 @@
         <option value="thatch">Thatch</option>
       </select>
       <button id="bphoto" type="button">Check my roof photo</button>
+      <button id="bsat" type="button">Check roof from satellite</button>
       <input id="fphoto" type="file" accept="image/png,image/jpeg,image/webp" hidden />
       <label for="froof" id="lbl-froof">Eneo la paa (m2)</label>
       <input id="froof" type="number" min="0" max="1000" step="1" value="30" inputmode="numeric" style="width:7em" />
@@ -304,6 +334,8 @@ const T = {
     mapNote: (s, el, wb) => `${s.name}, ${s.sub_county}: ${el} m juu ya bahari. Mvua ya mwaka ni ${wb}% ya mahitaji ya mimea.`,
     mapNoteCounty: (name, n) => `Kata ${n} za ${name}: rangi inaonyesha hali ya mvua ya mwezi unaofuata unaotegemewa. Bofya kata kusoma ushauri.`,
     mapMissing: 'Faili la mipaka halipatikani kwa kaunti hii.',
+    base: { street: 'Ramani', sat: 'Satelaiti' },
+    youHere: 'Uko hapa (makadirio - thibitisha kwa macho)',
     nearestCell: (km) => `Seli ya ERA5 ya karibu (km ${km} mbali): thamani ni za eneo hilo, si za kata hii haswa.`,
     mapLegend: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', noData: 'hakuna taarifa bado' },
     noWard: 'hakuna taarifa bado',
@@ -327,6 +359,8 @@ const T = {
     mapNote: (s, el, wb) => `${s.name}, ${s.sub_county}: ${el} m elevation. Annual rainfall is ${wb}% of crop water demand.`,
     mapNoteCounty: (name, n) => `${n} wards of ${name}: colour shows the next usable month's rainfall outlook. Click a ward to read its advisory.`,
     mapMissing: 'Boundary file not available for this county.',
+    base: { street: 'Map', sat: 'Satellite' },
+    youHere: 'You are here (approximate - confirm by eye)',
     nearestCell: (km) => `Nearest ERA5 cell (${km} km away): these values describe that cell, not this ward exactly.`,
     mapLegend: { above: 'above normal', near: 'near normal', below: 'below normal', noData: 'no data yet' },
     noWard: 'no data yet',
@@ -357,8 +391,106 @@ function fmtMonthKey(k) {
 
 let lang = 'en';
 let map, marker;
+let baseLayer = null;
+let baseKind = 'street';
+let youMarker = null;
+let youCircle = null;
+let lastAccuracy = null;
+let countyWardSlugs = new Map();
+
+/**
+ * Two basemaps, both free and keyless: OpenStreetMap streets and Esri World
+ * Imagery satellite. The satellite view shows the land; the location itself
+ * always comes from GPS or the labelled IP estimate, never from the imagery -
+ * a browser cannot read a position out of picture tiles, and pretending
+ * otherwise would be the kind of overstatement this service refuses to make.
+ */
+const BASES = {
+  street: {
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap contributors',
+  },
+  sat: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics and the GIS User Community',
+  },
+};
+
+function ensureMap() {
+  if (map) return map;
+  if (typeof L === 'undefined') return null; // CDN blocked: the map degrades, the page does not
+  map = L.map('map', { scrollWheelZoom: false, preferCanvas: true }).setView([0.2, 37.9], 7);
+  L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+  setBase(baseKind);
+  return map;
+}
+
+function setBase(kind) {
+  baseKind = BASES[kind] ? kind : 'street';
+  $('base-street').setAttribute('aria-pressed', String(baseKind === 'street'));
+  $('base-sat').setAttribute('aria-pressed', String(baseKind === 'sat'));
+  if (!map) return;
+  if (baseLayer) map.removeLayer(baseLayer);
+  const b = BASES[baseKind];
+  baseLayer = L.tileLayer(b.url, { attribution: b.attribution, maxZoom: 19, maxNativeZoom: 19 }).addTo(map);
+  // Choropleth reads differently on photography: repaint the wards for the base.
+  if (wardLayer) wardLayer.setStyle(wardStyle);
+}
+
+/** The blue dot: where the phone or the IP estimate says you are, with the GPS accuracy ring when there is one. */
+function setYouPin(lat, lon, accuracyM) {
+  if (!ensureMap()) return;
+  if (youMarker) { map.removeLayer(youMarker); youMarker = null; }
+  if (youCircle) { map.removeLayer(youCircle); youCircle = null; }
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+  const icon = L.divIcon({ className: '', html: '<div class="you-dot"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+  youMarker = L.marker([lat, lon], { icon, zIndexOffset: 1000 }).addTo(map);
+  youMarker.bindPopup((T[lang] ?? T.en).youHere);
+  if (Number.isFinite(accuracyM) && accuracyM > 0 && accuracyM < 100000) {
+    youCircle = L.circle([lat, lon], {
+      radius: accuracyM, color: '#2278a8', weight: 1, fillColor: '#2278a8', fillOpacity: 0.12, interactive: false,
+    }).addTo(map);
+  }
+}
+
+const escAttr = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/**
+ * After any successful point lookup: jump the choropleth to the county the
+ * point sits in, select its ward so the whole dashboard follows, drop the
+ * blue dot, and outline the matched ward. Never throws: the map is an
+ * extension of the lookup, not a dependency of it.
+ */
+async function syncMapToPoint(p) {
+  try {
+    if (!p || p.latitude == null || p.longitude == null) return;
+    const lat = Number(p.latitude);
+    const lon = Number(p.longitude);
+    const cs = p.county_slug;
+    if (cs && $('county').value !== cs && [...$('county').options].some((o) => o.value === cs)) {
+      $('county').value = cs;
+      await loadCounty();
+    }
+    // Ward sync must run whether or not the county changed: a point inside the
+    // already-selected county still has to move the dashboard to its ward.
+    const slug = p.ward ? countyWardSlugs.get(p.ward) : null;
+    if (slug && $('ward').value !== slug && [...$('ward').options].some((o) => o.value === slug)) {
+      $('ward').value = slug;
+      load();
+    }
+    setYouPin(lat, lon, lastAccuracy);
+    if (map) map.setView([lat, lon], Math.min(Math.max(map.getZoom(), 11), 15));
+    if (wardLayer && p.ward_id) {
+      wardLayer.eachLayer((l) => {
+        if (l.feature?.properties?.id === p.ward_id) l.setStyle({ color: baseKind === 'sat' ? '#ffffff' : '#16181a', weight: 3 });
+      });
+    }
+  } catch { /* the lookup result stands on its own */ }
+}
 
 const $ = (id) => document.getElementById(id);
+$('base-street').addEventListener('click', () => setBase('street'));
+$('base-sat').addEventListener('click', () => setBase('sat'));
 
 function applyStrings(t) {
   document.documentElement.lang = lang;
@@ -367,6 +499,8 @@ function applyStrings(t) {
   $('lbl-ward').textContent = t.ward;
   $('lbl-irr').textContent = t.irrigation;
   $('h-map').textContent = t.map;
+  $('base-street').textContent = t.base.street;
+  $('base-sat').textContent = t.base.sat;
   $('h-now').textContent = t.now;
   $('h-table').textContent = t.table;
   $('h-advice').textContent = t.advice;
@@ -485,6 +619,7 @@ async function loadCounty() {
     ]);
     countyWards = outlook.wards ?? [];
     tercileById = new Map(countyWards.map((w) => [w.id, w]));
+    countyWardSlugs = new Map((wards.wards ?? []).map((w) => [w.name, w.slug]));
     const sel = $('ward');
     const prev = sel.value;
     sel.innerHTML = (wards.wards ?? [])
@@ -513,12 +648,11 @@ async function drawCounty(slug, t, countyName) {
     return;
   }
 
-  if (!map) {
-    map = L.map('map', { scrollWheelZoom: false }).setView([0.2, 37.9], 7);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+  if (!ensureMap()) {
+    $('legend').hidden = true;
+    $('ward-attrib').hidden = true;
+    $('map-note').textContent = t.mapMissing;
+    return;
   }
   if (wardLayer) {
     map.removeLayer(wardLayer);
@@ -530,6 +664,11 @@ async function drawCounty(slug, t, countyName) {
     onEachFeature: (feature, layer) => {
       const w = tercileById.get(feature?.properties?.id);
       layer.bindPopup(popupFor(feature?.properties, w, t));
+      layer.bindTooltip(escAttr(feature?.properties?.ward), { className: 'ward-tip', sticky: true });
+      layer.on('mouseover', () => {
+        layer.setStyle({ weight: baseKind === 'sat' ? 3 : 2.4, fillOpacity: baseKind === 'sat' ? 0.7 : 0.84 });
+      });
+      layer.on('mouseout', () => wardLayer.resetStyle(layer));
       layer.on('click', () => {
         if (!w) return;
         $('ward').value = w.slug;
@@ -548,16 +687,18 @@ async function drawCounty(slug, t, countyName) {
 function wardStyle(feature) {
   const w = tercileById.get(feature?.properties?.id);
   const selected = Boolean(w) && w.slug === $('ward').value;
+  const sat = baseKind === 'sat';
   return {
-    color: selected ? '#16181a' : '#8d8880',
-    weight: selected ? 2.5 : 1,
+    // On photography, dark outlines vanish; paper-white edges keep the wards legible.
+    color: selected ? (sat ? '#ffffff' : '#16181a') : sat ? 'rgba(255, 253, 246, 0.75)' : '#8d8880',
+    weight: selected ? 3 : sat ? 1.3 : 1,
     fillColor: TER_COLOR[w?.tercile ?? 'unknown'] ?? TER_COLOR.unknown,
-    fillOpacity: w ? 0.72 : 0.25,
+    fillOpacity: w ? (sat ? 0.58 : 0.72) : 0.25,
   };
 }
 
 function popupFor(props, w, t) {
-  const name = props?.ward ?? '';
+  const name = escAttr(props?.ward ?? '');
   if (!w) return `${name}<br><strong>${t.noWard}</strong>`;
   const extra = w.cell_source === 'nearest' ? `<br>${t.nearestCell(w.cell_distance_km)}` : '';
   return `${name}<br><strong>${t.tercile[w.tercile] ?? w.tercile}</strong><br>${t.conf[w.confidence] ?? w.confidence}${extra}`;
@@ -717,11 +858,14 @@ const PT = {
     thatchNote: 'Paa la makuti haliwezi kuvuna maji: mpango utatumia maji ya kununua.',
     tilesNote: 'Vigae na zege vinamwaga mvua kidogo kuliko mabati: ukubwa wa tangi ni makadirio bora.',
     photoBtn: 'Kagua picha ya paa langu', photoWorking: 'Inasoma picha...', photoFail: 'Kikao cha picha hakipatikani sasa - chagua aina ya paa mwenyewe.',
+    satBtn: 'Kagua paa kwa satelaiti', satWorking: 'Inachukua picha ya satelaiti...', satNeedCoords: 'Tafuta eneo kwanza (au weka latitudo na longitudo), kisha jaribu satelaiti.',
+    satFail: 'Satelaiti haipatikani kwa eneo hili sasa - tumia picha ya simu au chagua aina ya paa mwenyewe.',
     ipFallbackNote: 'GPS haipatikani (ndani ya jengo ni kawaida) - nimetumia makadirio ya mji kutoka kwa mtandao wako. Kagua na urekebishe latitudo na longitudo.',
     surroundWorking: 'Ninaangalia kilichopo karibu nawe kwenye ramani...',
     surroundSuggested: (d, m) => `Pendekezo kutoka ramani (OpenStreetMap): ${d}${m ? `; paa: ${m}` : ''}. Thibitisha kwa macho, kisha jenga mpango.`,
     surroundNone: 'Hakuna majengo yaliyochorwa karibu hapa kwenye OpenStreetMap - jaza fomu hii mwenyewe.',
     photoDone: (m, c) => `Picha inaonyesha: ${m} (uhakika: ${c}). Thibitisha kwa macho, kisha jenga mpango upya.`,
+    satDone: (m, c) => `Satelaiti inaonyesha: ${m} (uhakika: ${c}). Makadirio tu - thibitisha kwa macho, kisha jenga mpango upya.`,
     foodVerify: 'Na nani kuthibitisha mpango huu',
     foodNeed: 'Chagua kata au weka latitudo na longitudo kwanza.',
     foodCrops: 'Mimea ya kupanda na miezi ya kuvuna',
@@ -778,11 +922,14 @@ const PT = {
     thatchNote: 'A thatch roof cannot harvest water: the plan will run on bought water.',
     tilesNote: 'Tiles and rough concrete shed less rain than iron sheet: the tank size is a best case.',
     photoBtn: 'Check my roof photo', photoWorking: 'Reading the photo...', photoFail: 'Photo check unavailable right now - pick the roof material yourself.',
+    satBtn: 'Check roof from satellite', satWorking: 'Capturing satellite view...', satNeedCoords: 'Find your location first (or enter coordinates), then try the satellite check.',
+    satFail: 'Satellite check unavailable for this spot right now - use a phone photo or pick the roof material yourself.',
     ipFallbackNote: 'No GPS fix (common indoors) - used a city-level estimate from your internet connection. Check and correct the coordinates.',
     surroundWorking: 'Checking what is mapped around this point...',
     surroundSuggested: (d, m) => `Map suggestion (OpenStreetMap): ${d}${m ? `; roof: ${m}` : ''}. Confirm with your eyes, then build the plan.`,
     surroundNone: 'Nothing is mapped around this point on OpenStreetMap - fill this form yourself.',
     photoDone: (m, c) => `The photo says: ${m} (confidence: ${c}). Confirm with your eyes, then rebuild the plan.`,
+    satDone: (m, c) => `The satellite says: ${m} (confidence: ${c}). Estimate only - confirm with your eyes, then rebuild the plan.`,
     foodVerify: 'Who to confirm this plan with',
     foodNeed: 'Select a ward or enter latitude and longitude first.',
     foodCrops: 'Planting plan with harvest months',
@@ -824,6 +971,7 @@ function ptLabels() {
   $('lbl-fmat').textContent = t.material;
   for (const opt of $('fmat').options) if (t.materials[opt.value]) opt.textContent = t.materials[opt.value];
   $('bphoto').textContent = t.photoBtn;
+  $('bsat').textContent = t.satBtn;
   $('lbl-froof').textContent = t.foodRoof;
   $('lbl-fpeople').textContent = t.foodPeople;
   $('bfood').textContent = t.foodBtn;
@@ -895,8 +1043,9 @@ function renderSkill(d) {
     <p class="warn">${esc(d.caveat)} ${esc(t.skillNote)}</p>`;
 }
 
-async function doLookup() {
+async function doLookup(accuracyM) {
   const t = pt();
+  lastAccuracy = Number.isFinite(accuracyM) ? accuracyM : null;
   const lat = $('plat').value.trim();
   const lon = $('plon').value.trim();
   if (!lat || !lon) {
@@ -914,6 +1063,7 @@ async function doLookup() {
     foodTarget = 'point';
     if (lastFood) doFood();
     suggestSurroundings(lastPoint.latitude, lastPoint.longitude);
+    syncMapToPoint(lastPoint);
   } catch (err) {
     $('point-status').textContent = `${t.err} ${String(err.message)}`;
   }
@@ -1106,7 +1256,7 @@ function doGeolocate() {
     (pos) => {
       $('plat').value = pos.coords.latitude.toFixed(5);
       $('plon').value = pos.coords.longitude.toFixed(5);
-      doLookup();
+      doLookup(pos.coords.accuracy);
     },
     () => {
       ipLocate(true);
@@ -1222,13 +1372,127 @@ $('fphoto').addEventListener('change', async () => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const j = await res.json();
     const map = { iron_sheet: 'iron', tiles: 'tiles', thatch: 'thatch' };
-    if (map[j.material]) $('fmat').value = map[j.material];
+    // A low-confidence verdict never touches the dropdown: the status line
+    // reports what the model said, and the human decides. Only medium/high
+    // preselects, still labelled confirm-with-your-eyes.
+    if (map[j.material] && j.confidence !== 'low') $('fmat').value = map[j.material];
     $('food-status').textContent = t.photoDone(j.material, j.confidence);
     if (lastFood) doFood();
   } catch {
     $('food-status').textContent = t.photoFail;
   } finally {
     $('fphoto').value = '';
+  }
+});
+
+/**
+ * Satellite roof check: pull the highest-resolution free imagery tile around the
+ * point (Esri World Imagery, CORS-enabled so the capture happens fully in the
+ * browser), crop ~150 m centred on the location, mark the exact spot with a thin
+ * crosshair, and ask the same enum-locked vision route used for phone photos.
+ * The verdict is a labelled estimate that preselects the material dropdown; the
+ * user still confirms by eye. No keys, no paid API, no new worker surface.
+ */
+function lonToTileX(lon, z) { return ((lon + 180) / 360) * Math.pow(2, z); }
+function latToTileY(lat, z) {
+  const r = (lat * Math.PI) / 180;
+  return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * Math.pow(2, z);
+}
+function loadSatTile(z, x, y) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('tile load failed'));
+    img.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+  });
+}
+async function captureSatellite(lat, lon) {
+  const z = 19; // ~0.3 m per pixel: a roof fills enough of the frame to judge
+  const fx = lonToTileX(lon, z);
+  const fy = latToTileY(lat, z);
+  const tx = Math.floor(fx);
+  const ty = Math.floor(fy);
+  const size = 512;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext('2d');
+  const ox = Math.round(size / 2 - (fx - tx) * 256);
+  const oy = Math.round(size / 2 - (fy - ty) * 256);
+  const jobs = [];
+  let loaded = 0;
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      jobs.push(loadSatTile(z, tx + dx, ty + dy).then((img) => {
+        ctx.drawImage(img, ox + dx * 256, oy + dy * 256, 256, 256);
+        loaded++;
+      }).catch(() => {}));
+    }
+  }
+  await Promise.all(jobs);
+  if (loaded < 5) throw new Error('not enough tiles'); // half-empty frame = no honest verdict
+  // Blank-imagery guard: Esri serves uniform light-grey no-data tiles over open
+  // water and unmapped remote areas. Asking a model about a flat grey square
+  // only manufactures an answer, so refuse before the frame ever leaves the
+  // browser. Deviation of the sampled luminance under ~3/255 means no texture.
+  const samp = document.createElement('canvas');
+  samp.width = 32;
+  samp.height = 32;
+  const sctx = samp.getContext('2d');
+  sctx.drawImage(c, 128, 128, 256, 256, 0, 0, 32, 32);
+  const px = sctx.getImageData(0, 0, 32, 32).data;
+  const lum = [];
+  for (let i = 0; i < px.length; i += 4) lum.push(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]);
+  const mean = lum.reduce((a, b) => a + b, 0) / lum.length;
+  const dev = lum.reduce((a, v) => a + Math.abs(v - mean), 0) / lum.length;
+  if (dev < 3) throw new Error('blank imagery at this spot');
+  // Crop the central ~75 m and upscale 4x: the roof under the crosshair fills
+  // the frame the model sees instead of being one speck among nine blocks.
+  const out = document.createElement('canvas');
+  out.width = 1024;
+  out.height = 1024;
+  const octx = out.getContext('2d');
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+  octx.drawImage(c, 128, 128, 256, 256, 0, 0, 1024, 1024);
+  octx.strokeStyle = 'rgba(255,255,255,0.95)';
+  octx.lineWidth = 4;
+  octx.beginPath();
+  octx.moveTo(512 - 64, 512); octx.lineTo(512 - 20, 512);
+  octx.moveTo(512 + 20, 512); octx.lineTo(512 + 64, 512);
+  octx.moveTo(512, 512 - 64); octx.lineTo(512, 512 - 20);
+  octx.moveTo(512, 512 + 20); octx.lineTo(512, 512 + 64);
+  octx.stroke();
+  return out.toDataURL('image/jpeg', 0.92);
+}
+$('bsat').addEventListener('click', async () => {
+  const t = pt();
+  const lat = parseFloat($('plat').value);
+  const lon = parseFloat($('plon').value);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+    $('food-status').textContent = t.satNeedCoords;
+    return;
+  }
+  $('bsat').disabled = true;
+  $('food-status').textContent = t.satWorking;
+  try {
+    const data = await captureSatellite(lat, lon);
+    const res = await fetch('/photo-roof', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ image: data, source: 'satellite' }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = await res.json();
+    const map = { iron_sheet: 'iron', tiles: 'tiles', thatch: 'thatch' };
+    if (map[j.material] && j.confidence !== 'low') $('fmat').value = map[j.material];
+    $('food-status').textContent = t.satDone(j.material, j.confidence);
+    if (lastFood) doFood();
+  } catch {
+    $('food-status').textContent = t.satFail;
+  } finally {
+    $('bsat').disabled = false;
   }
 });
 

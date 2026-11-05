@@ -57,6 +57,18 @@ const ROOF_VISION_MODELS = [
 const ROOF_MATERIALS = ['iron_sheet', 'tiles', 'thatch', 'other'];
 const ROOF_VISION_PROMPT =
   'Classify the roof in this photo into exactly one material: iron_sheet, tiles, thatch, other. Reply with JSON only, no prose: {"material":"...","confidence":"low|medium|high"}';
+/**
+ * Aerial imagery is a different problem from a phone photo: the model looks
+ * straight down at a whole block, so the prompt has to say what the frame is,
+ * where to look (the crosshair the dashboard draws), what each answer looks
+ * like from above, and that roads, cars, shadows and yards are not roofs.
+ * Without this the model answers "other" or guesses thatch on rust-coloured
+ * mabati, which is exactly the failure mode seen in live testing on 5 Nov.
+ */
+const ROOF_SATELLITE_PROMPT =
+  'This is a top-down satellite photograph of a neighbourhood in Kenya, about 75 metres across. A thin white crosshair at the centre marks one spot. Classify the roofing material of the building under the crosshair; if the crosshair falls on a road, yard or open ground, classify the nearest building roof instead. Choose exactly one: iron_sheet = corrugated metal sheeting, by far the most common roof here, in rust red, brown, orange, blue, grey or white, showing thin parallel ridges; tiles = clay or concrete roof tiles, or a flat concrete slab; thatch = dry grass or makuti, dull yellow-brown, fuzzy irregular texture, mostly in rural areas; other = only if no building roof is visible anywhere near the crosshair. Roads, cars, trees, walls and shadows are not roofs. Reply with JSON only, no prose: {"material":"...","confidence":"low|medium|high"}';
+const ROOF_SATELLITE_RETRY_PROMPT =
+  'Look again at this top-down satellite photograph of Kenya. If there is a building roof at or very near the white crosshair at the centre, classify it as exactly one of: iron_sheet (corrugated metal sheeting in any colour: rust red, brown, orange, blue, grey, white), tiles (clay or concrete tiles or a flat concrete slab), thatch (dry grass). Answer other only if the area truly shows no buildings at all - open water, dense forest, or bare empty land. Reply with JSON only, no prose: {"material":"...","confidence":"low|medium|high"}';
 
 function parseRoofVerdict(raw) {
   const text = String(raw ?? '');
@@ -105,7 +117,7 @@ function dataUrlToBytes(dataUrl) {
   return [...bytes];
 }
 
-async function workersAiRoofVerdict(env, image, failures) {
+async function workersAiRoofVerdict(env, image, failures, prompt = ROOF_VISION_PROMPT) {
   if (typeof env?.AI?.run !== 'function') {
     failures.push('workers-ai:no_binding');
     return null;
@@ -119,7 +131,7 @@ async function workersAiRoofVerdict(env, image, failures) {
     let agreed = false;
     for (let attempt = 1; attempt <= 2; attempt += 1) {
       try {
-        const input = { image: bytes, prompt: ROOF_VISION_PROMPT, max_tokens: 80 };
+        const input = { image: bytes, prompt, max_tokens: 200 };
         if (json) input.response_format = { type: 'json_object' };
         const out = await env.AI.run(model, input);
         const resp = out?.response;
@@ -148,9 +160,10 @@ async function workersAiRoofVerdict(env, image, failures) {
   return null;
 }
 
-async function classifyRoofPhoto(image, env = {}) {
+async function classifyRoofPhoto(image, env = {}, source = 'photo', promptOverride = null) {
   const failures = [];
-  const cf = await workersAiRoofVerdict(env, image, failures);
+  const prompt = promptOverride ?? (source === 'satellite' ? ROOF_SATELLITE_PROMPT : ROOF_VISION_PROMPT);
+  const cf = await workersAiRoofVerdict(env, image, failures, prompt);
   if (cf) return { result: cf, failures };
   for (const { model, maxTokens, tries } of ROOF_VISION_MODELS) {
     for (let attempt = 1; attempt <= tries; attempt += 1) {
@@ -165,7 +178,7 @@ async function classifyRoofPhoto(image, env = {}) {
               {
                 role: 'user',
                 content: [
-                  { type: 'text', text: ROOF_VISION_PROMPT },
+                  { type: 'text', text: prompt },
                   { type: 'image_url', image_url: { url: image } },
                 ],
               },
@@ -859,14 +872,24 @@ export async function handle(request, env = {}) {
       if (!/^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=\s]+$/.test(image) || image.length > 2000000) {
         return json({ error: 'send {"image": "data:image/png;base64,..."} of at most about 1.5 MB' }, { status: 400 });
       }
-      const { result, failures } = await classifyRoofPhoto(image, env);
+      const source = body?.source === 'satellite' ? 'satellite' : 'photo';
+      let { result, failures } = await classifyRoofPhoto(image, env, source);
+      if (result && source === 'satellite' && result.material === 'other') {
+        // "other" from orbit is almost always the model shrugging at a frame it
+        // was never told how to read. Ask once more, insisting a roof is there,
+        // before admitting defeat - and record that a retry happened.
+        failures.push('satellite:other_retry');
+        const retry = await classifyRoofPhoto(image, env, source, ROOF_SATELLITE_RETRY_PROMPT);
+        failures = failures.concat(retry.failures);
+        if (retry.result && retry.result.material !== 'other') result = retry.result;
+      }
       if (!result) {
         return json(
           { error: 'photo check unavailable right now; pick the roof material yourself', detail: failures },
           { status: 503 },
         );
       }
-      return json({ ...result, ...(failures.length ? { lane_notes: failures } : {}) });
+      return json({ ...result, source, ...(failures.length ? { lane_notes: failures } : {}) });
     }
 
     return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/locate', '/forecast', '/advisory', '/kitchen', '/skill', '/food-security', '/surroundings', '/ip-location', '/photo-roof', '/ussd'] }, { status: 404 });

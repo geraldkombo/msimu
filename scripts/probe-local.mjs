@@ -70,7 +70,7 @@ try {
     check('dashboard loads boundary files lazily per county', homeBody.includes('boundaries/'));
     check('no county is hardcoded into the dashboard', !homeBody.includes('kajiado-wards.geojson'));
     check('dashboard has legend + attribution nodes', homeBody.includes('id="legend"') && homeBody.includes('id="ward-attrib"'));
-    check('dashboard has the food-security planner', homeBody.includes('id="bfood"') && homeBody.includes('id="fdwelling"') && homeBody.includes('id="bshare"') && homeBody.includes('id="fmat"') && homeBody.includes('id="bphoto"') && homeBody.includes('id="pnoon"') && homeBody.includes('id="surround-status"') && homeBody.includes('/food-security?'));
+    check('dashboard has the food-security planner', homeBody.includes('id="bfood"') && homeBody.includes('id="fdwelling"') && homeBody.includes('id="bshare"') && homeBody.includes('id="fmat"') && homeBody.includes('id="bphoto"') && homeBody.includes('id="bsat"') && homeBody.includes('id="pnoon"') && homeBody.includes('id="surround-status"') && homeBody.includes('id="base-sat"') && homeBody.includes('/food-security?'));
     check('dashboard defaults to English', homeBody.includes('id="en" aria-pressed="true"') && homeBody.includes("let lang = 'en'"));
     check('dashboard attributes geoBoundaries', homeBody.includes('geoBoundaries'));
     check('dashboard discloses borrowed ERA5 cells', /nearestCell/.test(homeBody));
@@ -249,13 +249,21 @@ try {
 
     const photoBad = await fetch(`${base}/photo-roof`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: 'not-a-data-url' }) });
     check('POST /photo-roof validates the image payload', photoBad.status === 400, `status ${photoBad.status}`);
+    const tinyPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
     const photoTiny = await fetch(`${base}/photo-roof`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==' }),
+      body: JSON.stringify({ image: tinyPng }),
     });
     const pj = await photoTiny.json().catch(() => null);
     check('POST /photo-roof answers or admits the free lane shed', [200, 429, 503].includes(photoTiny.status) && (photoTiny.status !== 200 || ['iron_sheet', 'tiles', 'thatch', 'other'].includes(pj?.material)), `status ${photoTiny.status}, material ${pj?.material ?? '-'}`);
+    const photoSat = await fetch(`${base}/photo-roof`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ image: tinyPng, source: 'satellite' }),
+    });
+    const psj = await photoSat.json().catch(() => null);
+    check('POST /photo-roof takes the satellite source and echoes it', [200, 429, 503].includes(photoSat.status) && (photoSat.status !== 200 || psj?.source === 'satellite'), `status ${photoSat.status}, source ${psj?.source ?? '-'}`);
 
     const foodSw = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&lang=sw`);
     const fsw = await foodSw.json().catch(() => null);
