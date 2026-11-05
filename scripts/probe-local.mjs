@@ -294,6 +294,18 @@ try {
       `status ${iploc.status}, lat ${ij?.latitude ?? '-'}`,
     );
 
+    const geoBad = await fetch(`${base}/geocode`);
+    check('/geocode requires a query', geoBad.status === 400, `status ${geoBad.status}`);
+    const geo = await fetch(`${base}/geocode?q=${encodeURIComponent('Gitanga Road Nairobi')}`);
+    const gj = await geo.json().catch(() => null);
+    check(
+      '/geocode finds Kenyan places or admits the upstream is down',
+      [200, 502, 503].includes(geo.status) && (geo.status !== 200 || ((gj?.results ?? []).length > 0 && Number.isFinite(gj.results[0].latitude))),
+      `status ${geo.status}, results ${gj?.results?.length ?? '-'}`,
+    );
+    check('GET /health advertises /geocode', (health?.routes ?? []).some((r) => r.startsWith('/geocode')), `${(health?.routes ?? []).length} routes`);
+    check('the dashboard offers place-name search', homeBody.includes('id="psearch"') && homeBody.includes('id="psearchgo"'), 'search row present');
+
     const missing = await fetch(`${base}/nope`);
     check('unknown route 404s', missing.status === 404, `status ${missing.status}`);
   }

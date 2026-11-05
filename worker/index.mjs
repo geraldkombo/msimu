@@ -66,7 +66,7 @@ const ROOF_VISION_PROMPT =
  * mabati, which is exactly the failure mode seen in live testing on 5 Nov.
  */
 const ROOF_SATELLITE_PROMPT =
-  'This is a top-down satellite photograph of a neighbourhood in Kenya, about 75 metres across. A thin white crosshair at the centre marks one spot. Classify the roofing material of the building under the crosshair; if the crosshair falls on a road, yard or open ground, classify the nearest building roof instead. Choose exactly one: iron_sheet = corrugated metal sheeting, by far the most common roof here, in rust red, brown, orange, blue, grey or white, showing thin parallel ridges; tiles = clay or concrete roof tiles, or a flat concrete slab; thatch = dry grass or makuti, dull yellow-brown, fuzzy irregular texture, mostly in rural areas; other = only if no building roof is visible anywhere near the crosshair. Roads, cars, trees, walls and shadows are not roofs. Reply with JSON only, no prose: {"material":"...","confidence":"low|medium|high"}';
+  'This is a top-down satellite photograph of a neighbourhood in Kenya, about 30 to 60 metres across, at very high resolution. A thin white crosshair at the centre marks one spot. Classify the roofing material of the building under the crosshair; if the crosshair falls on a road, yard or open ground, classify the nearest building roof instead. Choose exactly one: iron_sheet = corrugated metal sheeting, by far the most common roof here, in rust red, brown, orange, blue, grey or white, showing thin parallel ridges; tiles = clay or concrete roof tiles, or a flat concrete slab; thatch = dry grass or makuti, dull yellow-brown, fuzzy irregular texture, mostly in rural areas; other = only if no building roof is visible anywhere near the crosshair. Roads, cars, trees, walls and shadows are not roofs. Reply with JSON only, no prose: {"material":"...","confidence":"low|medium|high"}';
 const ROOF_SATELLITE_RETRY_PROMPT =
   'Look again at this top-down satellite photograph of Kenya. If there is a building roof at or very near the white crosshair at the centre, classify it as exactly one of: iron_sheet (corrugated metal sheeting in any colour: rust red, brown, orange, blue, grey, white), tiles (clay or concrete tiles or a flat concrete slab), thatch (dry grass). Answer other only if the area truly shows no buildings at all - open water, dense forest, or bare empty land. Reply with JSON only, no prose: {"material":"...","confidence":"low|medium|high"}';
 
@@ -494,6 +494,7 @@ export async function handle(request, env = {}) {
           '/food-security?ward=kajiado--nkaimurunya&roof=30&people=4&lang=en',
           '/surroundings?lat=-1.286&lon=36.818',
           '/ip-location',
+          '/geocode',
           'POST /photo-roof',
           'POST /ussd',
         ],
@@ -633,6 +634,59 @@ export async function handle(request, env = {}) {
         accuracy: 'city_approx',
         note: 'City-level estimate from your internet connection, not a GPS fix. Check the pin before trusting the plan.',
       });
+    }
+
+    /**
+     * Place-name search: "Canopy Residence Gitanga" in, coordinates out. Free
+     * and keyless via OpenStreetMap Nominatim, proxied through the worker so
+     * the page's CSP stays same-origin-only and the upstream sees one stable
+     * user agent. Kenya-scoped on purpose: this is the Kenya pack, and a hard
+     * country filter beats a confident pin in the wrong country. Results carry
+     * the OSM display name so the user picks with their eyes, and the
+     * dashboard still asks for confirmation - a search hit is a suggestion,
+     * not a fix.
+     */
+    if (url.pathname === '/geocode') {
+      const q = (url.searchParams.get('q') ?? '').trim();
+      if (!q || q.length > 120) {
+        return json({ error: 'q is required, at most 120 characters' }, { status: 400 });
+      }
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&countrycodes=ke&addressdetails=0&q=${encodeURIComponent(q)}`,
+          {
+            headers: {
+              'user-agent': 'Msimu seasonal advisory (https://msimu.shikunyi.workers.dev; geraldshikunyi@gmail.com)',
+              'accept-language': 'en,sw',
+            },
+            signal: AbortSignal.timeout(10000),
+          },
+        );
+        if (!res.ok) {
+          return json({ error: 'place search upstream is unhappy', upstream_status: res.status }, { status: 502 });
+        }
+        const arr = await res.json();
+        const results = (Array.isArray(arr) ? arr : [])
+          .map((r) => ({
+            name: String(r?.name ?? r?.display_name ?? '').split(',')[0],
+            display_name: String(r?.display_name ?? ''),
+            latitude: Number(r?.lat),
+            longitude: Number(r?.lon),
+            kind: [r?.class, r?.type].filter(Boolean).join(':'),
+          }))
+          .filter((r) => Number.isFinite(r.latitude) && Number.isFinite(r.longitude));
+        return json(
+          {
+            query: q,
+            results,
+            source: 'nominatim_openstreetmap',
+            note: 'Place search from OpenStreetMap. Confirm the pin before trusting the plan.',
+          },
+          { headers: { 'cache-control': 'public, max-age=86400' } },
+        );
+      } catch (err) {
+        return json({ error: 'place search unavailable right now', detail: String(err?.message ?? err).slice(0, 60) }, { status: 503 });
+      }
     }
 
     /**
@@ -892,7 +946,7 @@ export async function handle(request, env = {}) {
       return json({ ...result, source, ...(failures.length ? { lane_notes: failures } : {}) });
     }
 
-    return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/locate', '/forecast', '/advisory', '/kitchen', '/skill', '/food-security', '/surroundings', '/ip-location', '/photo-roof', '/ussd'] }, { status: 404 });
+    return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/locate', '/forecast', '/advisory', '/kitchen', '/skill', '/food-security', '/surroundings', '/ip-location', '/geocode', '/photo-roof', '/ussd'] }, { status: 404 });
   } catch (err) {
     return json(
       { error: String(err?.message ?? err), site: wardRef ? null : siteId, ward: wardRef ?? null },

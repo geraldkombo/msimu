@@ -147,6 +147,12 @@
      card instead of stretching the whole page (fixed 5 Nov after a 360px test). */
   #table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   #point-result, #food-result { overflow-x: auto; }
+  #psearch-results button {
+    display: block; width: 100%; text-align: left; margin: 4px 0; padding: 7px 9px;
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); border-radius: 8px;
+    color: inherit; font: inherit; cursor: pointer;
+  }
+  #psearch-results button:hover { border-color: #2278a8; }
   th, td { text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
   th:first-child, td:first-child { text-align: left; }
   th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); font-weight: 700; }
@@ -212,6 +218,12 @@
       <button id="plookup" type="button">Tafuta</button>
     </div>
     <div class="controls" style="margin-top:10px">
+      <label for="psearch" id="lbl-psearch">Tafuta kwa jina</label>
+      <input id="psearch" type="search" placeholder="jina la eneo, mf. Canopy Residence Gitanga" style="flex:1;min-width:13em" />
+      <button id="psearchgo" type="button">Tafuta</button>
+    </div>
+    <div id="psearch-results" class="note" style="margin-top:6px"></div>
+    <div class="controls" style="margin-top:10px">
       <label for="pnoon" id="lbl-pnoon">At midday, is the growing spot in sun or shade?</label>
       <select id="pnoon">
         <option value="sun">Sun</option>
@@ -261,6 +273,7 @@
         </div>
       </div>
       <div id="map" role="img" aria-label="County ward map"></div>
+      <p class="note" id="map-hint" style="margin-top:6px"></p>
       <div id="legend" class="legend" hidden></div>
       <p class="note" id="map-note" style="margin-top:10px"></p>
       <p class="attrib" id="ward-attrib" hidden></p>
@@ -340,11 +353,19 @@ const T = {
     mapLegend: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', noData: 'hakuna taarifa bado' },
     noWard: 'hakuna taarifa bado',
     wardAttrib: 'Mipaka ya kata: geoBoundaries (CC BY 4.0)',
-    now: 'Kipindi kinachofuata', table: 'Miezi 7 ijayo (ECMWF SEAS5 vs wastani wa ERA5 2005-2024)',
+    now: 'Kipindi kinachofuata', table: 'Miezi 7 ijayo: mvua inayotarajiwa dhidi ya kawaida ya 2005-2024 kwa wadi hii (ECMWF SEAS5 kupitia Open-Meteo). Hatua za kilimo ni kanuni, si makisio.',
     advice: 'Ushauri', loading: 'Inapakia…',
-    cols: ['Mwezi', 'Utabiri', 'Wastani', 'Tofauti', 'Hali', 'Uhakika', 'Siku'],
+    cols: ['Mwezi', 'Mvua inayotarajiwa', 'Kawaida (2005-2024)', 'Hali', 'Uhakika', 'Kilimo: cha kufanya'],
     tercile: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', unknown: 'hakuna taarifa' },
     conf: { high: 'juu', medium: 'wastani', low: 'chini', none: ' - ' },
+    act: {
+      above: 'Mvua kubwa kuliko kawaida: panda mapema, toa maji kwenye matuta, hifadhi maji ya mvua kila chombo.',
+      near: 'Mvua za kawaida: panda kwa kalenda yako ya kawaida; hakuna hatua maalum.',
+      below: 'Ukame kuliko kawaida: mbegu za kuchipuka haraka, funika udongo, panda kwa awamu, andaa maji ya ziada.',
+      unknown: 'Hakuna ishara ya kutosha bado: usitegemee mwezi huu; kagua tena ukikaribia.',
+      low: 'Ishara dhaifu: panga kwa hali ya kawaida, kagua tena mwezi ukikaribia.',
+      partial: 'Data haijakamilika: makadirio ya awali tu; hukumu kamili mwezi ukikamilika.',
+    },
     partial: 'haijakamilika',
     noData: 'Hakuna taarifa ya kutegemewa kwa kipendi hiki.',
     src: 'Chanzo: ECMWF SEAS5 kupitia Open-Meteo (hakuna API key, hakuna gharama), ukilinganishwa na ERA5 2005-2024.',
@@ -365,11 +386,19 @@ const T = {
     mapLegend: { above: 'above normal', near: 'near normal', below: 'below normal', noData: 'no data yet' },
     noWard: 'no data yet',
     wardAttrib: 'Ward boundaries: geoBoundaries (CC BY 4.0)',
-    now: 'Next usable month', table: 'Next 7 months (ECMWF SEAS5 vs ERA5 2005-2024 baseline)',
+    now: 'Next usable month', table: 'Next 7 months: rain expected vs the 2005-2024 usual for this ward (ECMWF SEAS5 via Open-Meteo). The farming actions are rules, not guesses.',
     advice: 'Advisory', loading: 'Loading…',
-    cols: ['Month', 'Forecast', 'Median', 'Anomaly', 'Tercile', 'Confidence', 'Days'],
+    cols: ['Month', 'Rain expected', 'Usual rain (2005-2024)', 'Outlook', 'How sure', 'What to do - farming'],
     tercile: { above: 'above normal', near: 'near normal', below: 'below normal', unknown: 'unknown' },
     conf: { high: 'high', medium: 'medium', low: 'low', none: ' - ' },
+    act: {
+      above: 'Wetter than usual: plant early, drain waterlogged beds, fill every water container.',
+      near: 'Normal rains: plant on your usual calendar; no special bet needed.',
+      below: 'Drier than usual: short-maturing varieties, mulch, stagger planting, budget supplemental water.',
+      unknown: 'No usable signal for this month yet: do not bet the season on it; check again closer to the month.',
+      low: 'Weak signal: plan for normal conditions and re-check closer to the month.',
+      partial: 'Partial month data: indicative only; the verdict comes when the month is complete.',
+    },
     partial: 'partial',
     noData: 'No usable outlook for this period.',
     src: 'Source: ECMWF SEAS5 via Open-Meteo (no API key, no cost), against an ERA5 2005-2024 baseline.',
@@ -421,6 +450,16 @@ function ensureMap() {
   if (typeof L === 'undefined') return null; // CDN blocked: the map degrades, the page does not
   map = L.map('map', { scrollWheelZoom: false, preferCanvas: true }).setView([0.2, 37.9], 7);
   L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+  // Click-to-place: named search and GPS both fail sometimes (a residence that
+  // is not in OSM by name, a denied permission). The map itself is always the
+  // final authority - click where you stand and the whole dashboard follows.
+  map.on('click', (e) => {
+    if (!e?.latlng) return;
+    $('plat').value = e.latlng.lat.toFixed(5);
+    $('plon').value = e.latlng.lng.toFixed(5);
+    lastAccuracy = null;
+    doLookup();
+  });
   setBase(baseKind);
   return map;
 }
@@ -531,6 +570,19 @@ function renderNow(d, t, site) {
     </p>`;
 }
 
+/**
+ * The "what to do" column: deterministic rules over tercile + confidence, the
+ * same transparency as everything else in Msimu. It turns each month's numbers
+ * into the farming decision it implies - that is the whole point of the table:
+ * de-risking the season, not displaying meteorology.
+ */
+function actionFor(m, t) {
+  if (!m.complete) return t.act.partial;
+  if (!m.tercile || m.tercile === 'unknown') return t.act.unknown;
+  if (!m.confidence || m.confidence === 'low' || m.confidence === 'none') return t.act.low;
+  return t.act[m.tercile] ?? t.act.unknown;
+}
+
 function renderTable(months, t) {
   const host = $('table');
   if (!months?.length) { host.innerHTML = `<div class="state">${t.noData}</div>`; return; }
@@ -538,20 +590,22 @@ function renderTable(months, t) {
   const rows = months.map((m) => {
     const w = Math.round(((m.forecast_mm ?? 0) / max) * 100);
     const mw = Math.round(((m.median_mm ?? 0) / max) * 100);
-    const anom = m.median_mm ? `${Math.round(((m.forecast_mm - m.median_mm) / m.median_mm) * 100)}%` : ' - ';
+    const vsPct = m.median_mm ? Math.round(((m.forecast_mm - m.median_mm) / m.median_mm) * 100) : null;
+    const vsTxt = vsPct === null ? '' : ` <span style="color:${vsPct >= 0 ? '#2e7d32' : '#b23c17'};font-weight:650">${vsPct >= 0 ? '+' : ''}${vsPct}%</span>`;
     return `<tr>
-      <td>${fmtMonthKey(m.month)}${m.complete ? '' : ` <span class="partial">(${t.partial} ${m.days_covered ?? '?'}/${m.days_expected ?? '?'})</span>`}</td>
+      <td style="text-align:left">${fmtMonthKey(m.month)}${m.complete ? '' : ` <span class="partial">(${t.partial} ${m.days_covered ?? '?'}/${m.days_expected ?? '?'})</span>`}</td>
       <td>${m.forecast_mm ?? ' - '} mm</td>
-      <td>${m.median_mm ?? ' - '} mm</td>
-      <td>${anom}</td>
-      <td><div class="bar"><span style="width:${w}%;background:${TER_COLOR[m.tercile]}"></span><i style="left:${mw}%"></i></div></td>
-      <td style="text-align:left;color:${TER_TEXT[m.tercile] ?? TER_TEXT.unknown};font-weight:650">${t.tercile[m.tercile] ?? m.tercile}</td>
+      <td>${m.median_mm ?? ' - '} mm${vsTxt}</td>
+      <td style="text-align:left"><div style="display:flex;align-items:center;gap:8px;justify-content:flex-start">
+        <div class="bar" style="min-width:64px;flex:0 0 auto"><span style="width:${w}%;background:${TER_COLOR[m.tercile]}"></span><i style="left:${mw}%"></i></div>
+        <span style="color:${TER_TEXT[m.tercile] ?? TER_TEXT.unknown};font-weight:650;white-space:nowrap">${t.tercile[m.tercile] ?? m.tercile}</span>
+      </div></td>
       <td style="text-align:left">${t.conf[m.confidence] ?? m.confidence}</td>
-      <td>${m.days_covered ?? ' - '}/${m.days_expected ?? ' - '}</td>
+      <td style="text-align:left;font-size:12.5px;line-height:1.45">${actionFor(m, t)}</td>
     </tr>`;
   }).join('');
   host.innerHTML = `<table><caption class="note" style="caption-side:top;text-align:left;padding-bottom:6px">${t.table}</caption>
-    <thead><tr>${t.cols.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+    <thead><tr>${t.cols.map((c, i) => `<th${i === 0 || i >= 3 ? ' style="text-align:left"' : ''}>${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 /**
@@ -669,7 +723,10 @@ async function drawCounty(slug, t, countyName) {
         layer.setStyle({ weight: baseKind === 'sat' ? 3 : 2.4, fillOpacity: baseKind === 'sat' ? 0.7 : 0.84 });
       });
       layer.on('mouseout', () => wardLayer.resetStyle(layer));
-      layer.on('click', () => {
+      layer.on('click', (e) => {
+        // Keep the click on the ward: without this the map's click-to-place
+        // handler also fires and runs a second lookup for the same tap.
+        if (e?.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
         if (!w) return;
         $('ward').value = w.slug;
         load();
@@ -866,6 +923,17 @@ const PT = {
     surroundNone: 'Hakuna majengo yaliyochorwa karibu hapa kwenye OpenStreetMap - jaza fomu hii mwenyewe.',
     photoDone: (m, c) => `Picha inaonyesha: ${m} (uhakika: ${c}). Thibitisha kwa macho, kisha jenga mpango upya.`,
     satDone: (m, c) => `Satelaiti inaonyesha: ${m} (uhakika: ${c}). Makadirio tu - thibitisha kwa macho, kisha jenga mpango upya.`,
+    satAgree: (m, c) => `Picha mbili za satelaiti zinakubaliana: ${m} (uhakika: ${c}). Makadirio - thibitisha kwa macho.`,
+    searchLbl: 'Tafuta kwa jina', searchBtn: 'Tafuta', searchPh: 'jina la eneo, mf. Canopy Residence Gitanga',
+    searching: 'Inatafuta mahali...', searchNone: 'Hakuna matokeo - jaribu jina tofauti, au weka latitudo na longitudo.',
+    searchFail: 'Kutafuta kwa jina hakupatikani sasa - weka latitudo na longitudo mwenyewe.',
+    searchAttrib: 'Majina ya mahali kutoka OpenStreetMap.',
+    mapHint: 'Bofya ramani popote kuweka pini mahali ulipo - dashibodi yote itafuata.',
+    satVoting: 'Inalinganisha picha mbili za satelaiti...',
+    satSplit: (a, b) => `Satelaiti haikukubaliana: picha moja imesema ${a}, nyingine ${b} (uhakika: chini). Chagua aina ya paa mwenyewe.`,
+    satOsm: (m) => `Data ya uchunguzi ya OpenStreetMap karibu nawe inasema paa ni ${m} - hii ni data iliyopimwa na binadamu, si makadirio.`,
+    satOsmVision: (o, v) => `Data ya OpenStreetMap: ${o}. Satelaiti inakubaliana: ${v}.`,
+    satOsmVisionSplit: (o, v) => `Data ya OpenStreetMap: ${o} (tumia hii). Satelaiti ilisema ${v} - makadirio tu; data ya uchunguzi inashinda.`,
     foodVerify: 'Na nani kuthibitisha mpango huu',
     foodNeed: 'Chagua kata au weka latitudo na longitudo kwanza.',
     foodCrops: 'Mimea ya kupanda na miezi ya kuvuna',
@@ -930,6 +998,17 @@ const PT = {
     surroundNone: 'Nothing is mapped around this point on OpenStreetMap - fill this form yourself.',
     photoDone: (m, c) => `The photo says: ${m} (confidence: ${c}). Confirm with your eyes, then rebuild the plan.`,
     satDone: (m, c) => `The satellite says: ${m} (confidence: ${c}). Estimate only - confirm with your eyes, then rebuild the plan.`,
+    satAgree: (m, c) => `Two satellite frames agree: ${m} (confidence: ${c}). Estimate - confirm with your eyes.`,
+    searchLbl: 'Search by name', searchBtn: 'Search', searchPh: 'place name, e.g. Canopy Residence Gitanga',
+    searching: 'Searching for the place...', searchNone: 'No results - try a different spelling, or enter coordinates.',
+    searchFail: 'Place search unavailable right now - enter coordinates manually.',
+    searchAttrib: 'Place names from OpenStreetMap.',
+    mapHint: 'Click anywhere on the map to place your pin - the whole dashboard follows.',
+    satVoting: 'Comparing two satellite frames...',
+    satSplit: (a, b) => `The satellite disagreed with itself: one frame said ${a}, the other ${b} (confidence: low). Pick the roof material yourself.`,
+    satOsm: (m) => `OpenStreetMap survey data near you says the roof is ${m} - human-mapped data, not an estimate.`,
+    satOsmVision: (o, v) => `OpenStreetMap survey data: ${o}. The satellite frames agree: ${v}.`,
+    satOsmVisionSplit: (o, v) => `OpenStreetMap survey data: ${o} (use this). The satellite said ${v} - an estimate; survey data wins.`,
     foodVerify: 'Who to confirm this plan with',
     foodNeed: 'Select a ward or enter latitude and longitude first.',
     foodCrops: 'Planting plan with harvest months',
@@ -950,6 +1029,10 @@ function ptLabels() {
   $('pskill').textContent = t.skillBtn;
   $('lbl-plat').textContent = t.lat;
   $('lbl-plon').textContent = t.lon;
+  $('lbl-psearch').textContent = t.searchLbl;
+  $('psearchgo').textContent = t.searchBtn;
+  $('psearch').placeholder = t.searchPh;
+  $('map-hint').textContent = t.mapHint;
   $('lbl-pwater').textContent = t.water;
   $('lbl-pter').textContent = t.tercile;
   for (const [sel, dict] of [['paspect', t.aspects], ['pwater', t.waters], ['pter', t.terciles]]) {
@@ -1407,19 +1490,30 @@ function loadSatTile(z, x, y) {
     img.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
   });
 }
-async function captureSatellite(lat, lon) {
-  const z = 19; // ~0.3 m per pixel: a roof fills enough of the frame to judge
+async function captureSatellite(lat, lon, crop = 192) {
+  // Esri serves deeper zoom over most Kenyan urban areas (z20 is about 0.15 m
+  // per pixel, so a roof fills the frame instead of being a speck). Where z20
+  // has no coverage the tiles 404 and we fall back to z19 (~0.3 m).
+  for (const z of [20, 19]) {
+    const url = await captureAtZoom(lat, lon, z, crop).catch(() => null);
+    if (url) {
+      window.__lastSatZoom = z; // debug/test hook, nothing in the UI reads it
+      return url;
+    }
+  }
+  throw new Error('no usable imagery at this spot');
+}
+async function captureAtZoom(lat, lon, z, crop = 192) {
   const fx = lonToTileX(lon, z);
   const fy = latToTileY(lat, z);
   const tx = Math.floor(fx);
   const ty = Math.floor(fy);
-  const size = 512;
   const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
+  c.width = 512;
+  c.height = 512;
   const ctx = c.getContext('2d');
-  const ox = Math.round(size / 2 - (fx - tx) * 256);
-  const oy = Math.round(size / 2 - (fy - ty) * 256);
+  const ox = Math.round(256 - (fx - tx) * 256);
+  const oy = Math.round(256 - (fy - ty) * 256);
   const jobs = [];
   let loaded = 0;
   for (let dx = -1; dx <= 1; dx++) {
@@ -1431,7 +1525,11 @@ async function captureSatellite(lat, lon) {
     }
   }
   await Promise.all(jobs);
-  if (loaded < 5) throw new Error('not enough tiles'); // half-empty frame = no honest verdict
+  if (loaded < 5) return null; // half-empty frame = no honest verdict
+  // Tight crop centred on the crosshair: 192 px is about 29 m at z20, 57 m at
+  // z19; the wider 320 px vote frame gives the model a second, more generous
+  // look at the same spot so a single bad crop cannot decide the answer.
+  const off = (512 - crop) / 2;
   // Blank-imagery guard: Esri serves uniform light-grey no-data tiles over open
   // water and unmapped remote areas. Asking a model about a flat grey square
   // only manufactures an answer, so refuse before the frame ever leaves the
@@ -1440,22 +1538,20 @@ async function captureSatellite(lat, lon) {
   samp.width = 32;
   samp.height = 32;
   const sctx = samp.getContext('2d');
-  sctx.drawImage(c, 128, 128, 256, 256, 0, 0, 32, 32);
+  sctx.drawImage(c, off, off, crop, crop, 0, 0, 32, 32);
   const px = sctx.getImageData(0, 0, 32, 32).data;
   const lum = [];
   for (let i = 0; i < px.length; i += 4) lum.push(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]);
   const mean = lum.reduce((a, b) => a + b, 0) / lum.length;
   const dev = lum.reduce((a, v) => a + Math.abs(v - mean), 0) / lum.length;
-  if (dev < 3) throw new Error('blank imagery at this spot');
-  // Crop the central ~75 m and upscale 4x: the roof under the crosshair fills
-  // the frame the model sees instead of being one speck among nine blocks.
+  if (dev < 3) return null; // blank: try the next zoom down, then fail honestly
   const out = document.createElement('canvas');
   out.width = 1024;
   out.height = 1024;
   const octx = out.getContext('2d');
   octx.imageSmoothingEnabled = true;
   octx.imageSmoothingQuality = 'high';
-  octx.drawImage(c, 128, 128, 256, 256, 0, 0, 1024, 1024);
+  octx.drawImage(c, off, off, crop, crop, 0, 0, 1024, 1024);
   octx.strokeStyle = 'rgba(255,255,255,0.95)';
   octx.lineWidth = 4;
   octx.beginPath();
@@ -1476,21 +1572,62 @@ $('bsat').addEventListener('click', async () => {
   }
   $('bsat').disabled = true;
   $('food-status').textContent = t.satWorking;
+  const MAT = { iron_sheet: 'iron', tiles: 'tiles', thatch: 'thatch' };
+  const show = (msg) => { $('food-status').textContent = msg; };
+  const pretty = (m) => t.materials?.[m] ?? m;
   try {
-    const data = await captureSatellite(lat, lon);
-    const res = await fetch('/photo-roof', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ image: data, source: 'satellite' }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const j = await res.json();
-    const map = { iron_sheet: 'iron', tiles: 'tiles', thatch: 'thatch' };
-    if (map[j.material] && j.confidence !== 'low') $('fmat').value = map[j.material];
-    $('food-status').textContent = t.satDone(j.material, j.confidence);
+    // Everything runs in parallel: the OSM survey fetch, and two independent
+    // satellite frames (tight + wide crop) each asked for a verdict.
+    const surroundP = fetch(`/surroundings?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    const caps = await Promise.allSettled([captureSatellite(lat, lon, 192), captureSatellite(lat, lon, 320)]);
+    const frames = caps.filter((c) => c.status === 'fulfilled').map((c) => c.value);
+    if (!frames.length) throw new Error('no imagery');
+    show(t.satVoting);
+    const verdicts = (await Promise.allSettled(
+      frames.map((img) =>
+        fetch('/photo-roof', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ image: img, source: 'satellite' }),
+        }).then(async (r) => (r.ok ? r.json() : null)),
+      ),
+    ))
+      .filter((c) => c.status === 'fulfilled' && c.value)
+      .map((c) => c.value);
+    const sj = await surroundP;
+    const osmMat = sj?.suggestion?.roof_material ?? null; // 'iron' | 'tiles' | 'thatch', from mapped roof:material tags
+    const voted = verdicts.map((v) => MAT[v.material]).filter(Boolean);
+    const agree = voted.length >= 2 && voted[0] === voted[1] && voted[0] !== 'other';
+    const single = voted.length === 1 ? verdicts[0] : null;
+
+    if (osmMat) {
+      // Survey data wins: a human being mapped this roof in OpenStreetMap.
+      $('fmat').value = osmMat;
+      const vis = agree ? voted[0] : single && single.confidence !== 'low' ? MAT[single.material] : null;
+      if (vis && vis === osmMat) show(t.satOsmVision(pretty(osmMat), pretty(vis)));
+      else if (vis) show(t.satOsmVisionSplit(pretty(osmMat), pretty(vis)));
+      else show(t.satOsm(pretty(osmMat)));
+    } else if (agree) {
+      // No survey data: two independent frames agreeing is the strongest
+      // evidence the vision lane can produce. Confidence is capped by what the
+      // models themselves claimed - agreement lifts low+low to medium, never
+      // invents "high".
+      const conf = verdicts.some((v) => v.confidence === 'high') ? 'high' : 'medium';
+      $('fmat').value = voted[0];
+      show(t.satAgree(pretty(voted[0]), conf));
+    } else if (single && single.material !== 'other' && single.confidence !== 'low') {
+      $('fmat').value = MAT[single.material];
+      show(t.satDone(single.material, single.confidence));
+    } else if (voted.length >= 2) {
+      show(t.satSplit(pretty(voted[0]), pretty(voted[1])));
+    } else {
+      throw new Error('no verdict');
+    }
     if (lastFood) doFood();
   } catch {
-    $('food-status').textContent = t.satFail;
+    show(t.satFail);
   } finally {
     $('bsat').disabled = false;
   }
@@ -1512,6 +1649,67 @@ async function shareFood() {
   }
 }
 $('bshare').addEventListener('click', shareFood);
+
+/**
+ * Place-name search: type "Canopy Residence Gitanga", pick the hit, and the
+ * whole dashboard follows. Proxied through the worker's /geocode route (OSM
+ * Nominatim, Kenya-scoped, free and keyless). A search hit fills the
+ * coordinates and runs the normal lookup, so the ward, strip, map pin and
+ * surroundings all update exactly as they do for GPS - and the plan still
+ * asks the user to confirm the pin.
+ */
+function applyPlace(r) {
+  $('plat').value = Number(r.latitude).toFixed(5);
+  $('plon').value = Number(r.longitude).toFixed(5);
+  lastAccuracy = null; // a named place has no GPS accuracy ring to show
+  doLookup();
+}
+async function doPlaceSearch() {
+  const t = pt();
+  const q = $('psearch').value.trim();
+  const host = $('psearch-results');
+  if (!q) return;
+  host.textContent = t.searching;
+  try {
+    const res = await fetch(`/geocode?q=${encodeURIComponent(q)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = await res.json();
+    const rs = (j.results ?? []).slice(0, 3);
+    if (!rs.length) {
+      host.textContent = t.searchNone;
+      return;
+    }
+    if (rs.length === 1) {
+      host.textContent = '';
+      applyPlace(rs[0]);
+      return;
+    }
+    host.innerHTML = '';
+    for (const r of rs) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      const tail = String(r.display_name ?? '').split(',').slice(1, 4).join(',').trim();
+      b.textContent = `${r.name}${tail ? ` - ${tail}` : ''}`;
+      b.addEventListener('click', () => {
+        host.innerHTML = '';
+        applyPlace(r);
+      });
+      host.appendChild(b);
+    }
+    const att = document.createElement('span');
+    att.textContent = t.searchAttrib;
+    host.appendChild(att);
+  } catch {
+    host.textContent = t.searchFail;
+  }
+}
+$('psearchgo').addEventListener('click', doPlaceSearch);
+$('psearch').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    doPlaceSearch();
+  }
+});
 for (const id of ['sw', 'en']) $(id).addEventListener('click', ptLabels);
 ptLabels();
 </script>
