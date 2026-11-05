@@ -10,7 +10,7 @@ Most climate products in the region are dashboards. They show rainfall to a user
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Dependencies: zero](https://img.shields.io/badge/dependencies-zero-brightgreen)](./package.json)
 
-**Live:** <https://msimu.shikunyi.workers.dev> - dashboard, JSON API and USSD endpoint on one Cloudflare Worker. Country-wide build on the finished 403-cell normals pack (version `0d99597b`, built 2026-11-04: food-security plan with KNBS county household defaults, flat-dweller mode, roof length x width with material and photo check, the verification desk, WhatsApp sharing, English-first dashboard, USSD food screen) verified with `npm run probe:live` (107/107 checks).
+**Live:** <https://msimu.shikunyi.workers.dev> - dashboard, JSON API and USSD endpoint on one Cloudflare Worker. Country-wide build on the finished 403-cell normals pack (version `0d99597b`): food-security plan with KNBS county household defaults, flat-dweller mode, roof length x width with material and photo check, the verification desk, WhatsApp sharing, English-first dashboard, USSD food screen, roof-photo material check on the Cloudflare Workers AI free allowance, GPS-with-IP-fallback location that works indoors, and OpenStreetMap surroundings analysis that auto-suggests the food-form inputs - verified with `npm run probe:live` (107/107 checks).
 
 ---
 
