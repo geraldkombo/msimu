@@ -80,6 +80,7 @@ try {
     check('dashboard has the food-security planner', homeBody.includes('id="bfood"') && homeBody.includes('id="fdwelling"') && homeBody.includes('id="bshare"') && homeBody.includes('id="fmat"') && homeBody.includes('id="bphoto"') && homeBody.includes('id="bsat"') && homeBody.includes('id="pnoon"') && homeBody.includes('id="surround-status"') && homeBody.includes('id="base-sat"') && homeBody.includes('/food-security?'));
     check('dashboard defaults to English', homeBody.includes('id="en" aria-pressed="true"') && homeBody.includes("let lang = 'en'"));
     check('dashboard attributes geoBoundaries', homeBody.includes('geoBoundaries'));
+    check('dashboard has a main landmark and live status regions', homeBody.includes('<main>') && homeBody.includes('aria-live="polite"'));
     check('dashboard discloses borrowed ERA5 cells', /nearestCell/.test(homeBody));
 
     // Country-wide catalogue

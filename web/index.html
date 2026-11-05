@@ -75,11 +75,14 @@
   button { cursor: pointer; font-weight: 650; }
   button:hover, select:hover { border-color: var(--leaf); }
   button:active { transform: translateY(1px); }
+  button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
   button[aria-pressed="true"] { background: var(--leaf); border-color: var(--leaf); color: #fff; }
-  #bfood, #plookup, #geolocate, #pkitchen, #pskill, #bphoto, #bsat, #bshare {
+  /* One primary per task zone: locate (GPS / Look up) and Build the plan.
+     Everything else stays a neutral secondary so the eye has no competition. */
+  #bfood, #plookup, #geolocate {
     background: var(--leaf); border-color: var(--leaf); color: #fff;
   }
-  #bfood:hover, #plookup:hover, #geolocate:hover, #pkitchen:hover, #pskill:hover, #bphoto:hover, #bsat:hover, #bshare:hover {
+  #bfood:hover, #plookup:hover, #geolocate:hover {
     background: var(--leaf-dark); border-color: var(--leaf-dark);
   }
   input[type="checkbox"] { accent-color: var(--leaf); width: 15px; height: 15px; }
@@ -172,6 +175,9 @@
      card instead of stretching the whole page (fixed 5 Nov after a 360px test). */
   #table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   #point-result, #food-result { overflow-x: auto; }
+  #point-result h3 { font-size: 15px; margin: 14px 0 8px; font-weight: 750; }
+  #point-result ul { margin: 6px 0; padding-left: 18px; }
+  #point-result ul li::marker { color: var(--leaf); }
   #psearch-results button {
     display: block; width: 100%; text-align: left; margin: 4px 0; padding: 7px 9px;
     background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); border-radius: 8px;
@@ -234,6 +240,7 @@
     </div>
   </header>
 
+  <main>
   <section class="card" id="pointcard" style="margin-bottom:20px">
     <h2 id="lbl-point-h">Tafuta mahali husika</h2>
     <div class="controls">
@@ -286,7 +293,7 @@
       <button id="pkitchen" type="button">Ushauri wa bustani ya jikoni</button>
       <button id="pskill" type="button">Usahihi wa matabiri</button>
     </div>
-    <p class="note" id="point-status" style="margin-top:10px"></p>
+    <p class="note" id="point-status" style="margin-top:10px" aria-live="polite"></p>
     <div id="point-result" style="margin-top:10px"></div>
   </section>
 
@@ -294,7 +301,7 @@
     <section class="card">
       <div class="cardhead">
         <h2 id="h-map">Ramani ya kaunti</h2>
-        <div class="switch">
+        <div class="switch" role="group" aria-label="Basemap">
           <button id="base-street" type="button" aria-pressed="true">Ramani</button>
           <button id="base-sat" type="button" aria-pressed="false">Satelaiti</button>
         </div>
@@ -302,7 +309,7 @@
       <div id="map" role="img" aria-label="County ward map"></div>
       <p class="note" id="map-hint" style="margin-top:6px"></p>
       <div id="legend" class="legend" hidden></div>
-      <p class="note" id="map-note" style="margin-top:10px"></p>
+      <p class="note" id="map-note" style="margin-top:10px" aria-live="polite"></p>
       <p class="attrib" id="ward-attrib" hidden></p>
     </section>
 
@@ -352,10 +359,12 @@
       <button id="bfood" type="button">Tengeneza mpango</button>
       <button id="bshare" type="button" hidden>Share this plan</button>
     </div>
-    <p class="note" id="surround-status" style="margin-top:8px"></p>
-    <p class="note" id="food-status" style="margin-top:10px"></p>
+    <p class="note" id="surround-status" style="margin-top:8px" aria-live="polite"></p>
+    <p class="note" id="food-status" style="margin-top:10px" aria-live="polite"></p>
     <div id="food-result" style="margin-top:10px"></div>
   </section>
+
+  </main>
 
   <footer>
     <p id="src"></p>
@@ -435,7 +444,7 @@ const T = {
   },
 };
 const TER_COLOR = { above: '#2278a8', near: '#8b8f94', below: '#c4761c', unknown: '#b8b3a8' };
-const TER_TEXT = { above: '#1b5e8a', near: '#5f6469', below: '#96591a', unknown: '#8a857a' };
+const TER_TEXT = { above: '#1b5e8a', near: '#5f6469', below: '#96591a', unknown: '#6b665c' };
 const MON = {
   sw: ['Jan', 'Feb', 'Mac', 'Apr', 'Mei', 'Jun', 'Jul', 'Ago', 'Sep', 'Okt', 'Nov', 'Des'],
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
