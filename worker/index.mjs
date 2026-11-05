@@ -484,6 +484,7 @@ export async function handle(request, env = {}) {
         routes: [
           '/counties',
           '/wards?county=kajiado',
+          '/county-outlook?county=kajiado',
           '/locate?lat=-1.28496&lon=36.89468',
           '/forecast?ward=kajiado--nkaimurunya',
           '/forecast?lat=-1.28496&lon=36.89468',
@@ -627,16 +628,22 @@ export async function handle(request, env = {}) {
       const cf = request.cf ?? null;
       const lat = Number(cf?.latitude);
       const lon = Number(cf?.longitude);
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-        return json({ error: 'IP location is unavailable on this request; enter coordinates manually' }, { status: 404 });
-      }
-      return json({
-        latitude: lat,
-        longitude: lon,
-        basis: 'cloudflare_ip',
-        accuracy: 'city_approx',
-        note: 'City-level estimate from your internet connection, not a GPS fix. Check the pin before trusting the plan.',
-      });
+      // Deliberately the ONE route with no wildcard CORS: its answer is derived
+      // from the caller's own IP, so an access-control-allow-origin: * here
+      // would turn Msimu into a free IP-geolocation oracle that any website
+      // the user visits could query and read. The dashboard calls it
+      // same-origin and never needs the header.
+      const res = Number.isFinite(lat) && Number.isFinite(lon)
+        ? json({
+            latitude: lat,
+            longitude: lon,
+            basis: 'cloudflare_ip',
+            accuracy: 'city_approx',
+            note: 'City-level estimate from your internet connection, not a GPS fix. Check the pin before trusting the plan.',
+          })
+        : json({ error: 'IP location is unavailable on this request; enter coordinates manually' }, { status: 404 });
+      res.headers.delete('access-control-allow-origin');
+      return res;
     }
 
     /**
@@ -659,7 +666,7 @@ export async function handle(request, env = {}) {
           `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=3&countrycodes=ke&addressdetails=0&q=${encodeURIComponent(q)}`,
           {
             headers: {
-              'user-agent': 'Msimu seasonal advisory (https://msimu.shikunyi.workers.dev; geraldshikunyi@gmail.com)',
+              'user-agent': 'Msimu seasonal advisory (https://msimu.pages.dev; geraldshikunyi@gmail.com)',
               'accept-language': 'en,sw',
             },
             signal: AbortSignal.timeout(10000),
@@ -712,7 +719,7 @@ export async function handle(request, env = {}) {
       const hit = cache.get(key);
       if (hit && Date.now() - hit.at < hit.ttl) return json(hit.value);
 
-      const UA = 'Msimu food-security planner (https://msimu.shikunyi.workers.dev; geraldshikunyi@gmail.com)';
+      const UA = 'Msimu food-security planner (https://msimu.pages.dev; geraldshikunyi@gmail.com)';
       const notes = [];
       let elements = [];
       let sourceOk = false;
@@ -949,7 +956,7 @@ export async function handle(request, env = {}) {
       return json({ ...result, source, ...(failures.length ? { lane_notes: failures } : {}) });
     }
 
-    return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/locate', '/forecast', '/advisory', '/kitchen', '/skill', '/food-security', '/surroundings', '/ip-location', '/geocode', '/photo-roof', '/ussd'] }, { status: 404 });
+    return json({ error: 'not found', routes: ['/health', '/counties', '/wards', '/county-outlook', '/locate', '/forecast', '/advisory', '/kitchen', '/skill', '/food-security', '/surroundings', '/ip-location', '/geocode', '/photo-roof', '/ussd'] }, { status: 404 });
   } catch (err) {
     return json(
       { error: String(err?.message ?? err), site: wardRef ? null : siteId, ward: wardRef ?? null },

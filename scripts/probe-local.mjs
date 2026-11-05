@@ -6,7 +6,7 @@
  *   node scripts/probe-local.mjs [--port 8091]
  *
  * Remote mode: probe an already-deployed Worker without starting anything.
- *   node scripts/probe-local.mjs --base https://msimu.shikunyi.workers.dev
+ *   node scripts/probe-local.mjs --base https://msimu.pages.dev
  *
  * Exit code 0 = every check passed, 1 = at least one failure.
  * This is the "prove it works" script: it exercises the real HTTP surface, not mocks.
@@ -68,8 +68,8 @@ try {
     const leafCss = await fetch(`${base}/vendor/leaflet/leaflet.css`);
     check(
       'dashboard serves its own Leaflet copy, no CDN at runtime',
-      leafJs.ok && leafCss.ok && homeBody.includes('/vendor/leaflet/') && !homeBody.includes('unpkg.com'),
-      `js ${leafJs.status}, css ${leafCss.status}`,
+      leafJs.ok && leafCss.ok && String(leafJs.headers.get('content-type') ?? '').includes('javascript') && homeBody.includes('/vendor/leaflet/') && !homeBody.includes('unpkg.com'),
+      `js ${leafJs.status} ${leafJs.headers.get('content-type') ?? '?'}, css ${leafCss.status}`,
     );
     check('dashboard has county and ward pickers', homeBody.includes('id="county"') && homeBody.includes('id="ward"'));
     check('dashboard loads the county list from the API', homeBody.includes("fetch('/counties')"));
@@ -79,6 +79,16 @@ try {
     check('dashboard has legend + attribution nodes', homeBody.includes('id="legend"') && homeBody.includes('id="ward-attrib"'));
     check('dashboard has the food-security planner', homeBody.includes('id="bfood"') && homeBody.includes('id="fdwelling"') && homeBody.includes('id="bshare"') && homeBody.includes('id="fmat"') && homeBody.includes('id="bphoto"') && homeBody.includes('id="bsat"') && homeBody.includes('id="pnoon"') && homeBody.includes('id="surround-status"') && homeBody.includes('id="base-sat"') && homeBody.includes('/food-security?'));
     check('dashboard visualises the food plan: stance banner, lean calendar, water budget, derivation panel', homeBody.includes('id="food-stance"') && homeBody.includes('lean-cal') && homeBody.includes('foodTankWhyRoof') && homeBody.includes('id="food-how"'));
+    check(
+      'dashboard has the free USSD simulator wired to the real endpoint',
+      homeBody.includes('id="ussd-screen"') && homeBody.includes('id="ussd-dial"') && homeBody.includes('id="ussd-reply"') && homeBody.includes('id="ussd-keys"') && homeBody.includes("fetch('/ussd'"),
+      'phone frame + POST /ussd',
+    );
+    check(
+      'dashboard uses the official Kenya flag palette (black/red/green/white)',
+      homeBody.includes('#006600') && homeBody.includes('#bb0000') && homeBody.includes('#000000') && !homeBody.includes('#14342b') && !homeBody.includes('#2278a8') && !homeBody.includes('#c4761c'),
+      'no legacy colours remain',
+    );
     check('dashboard defaults to English', homeBody.includes('id="en" aria-pressed="true"') && homeBody.includes("let lang = 'en'"));
     check('dashboard attributes geoBoundaries', homeBody.includes('geoBoundaries'));
     check('dashboard has a main landmark and live status regions', homeBody.includes('<main>') && homeBody.includes('aria-live="polite"'));
@@ -315,6 +325,11 @@ try {
       (iploc.status === 200 && ij?.basis === 'cloudflare_ip' && Number.isFinite(ij?.latitude)) || iploc.status === 404,
       `status ${iploc.status}, lat ${ij?.latitude ?? '-'}`,
     );
+    check(
+      '/ip-location never advertises wildcard CORS (it would be an IP-geolocation oracle for any website)',
+      iploc.headers.get('access-control-allow-origin') === null,
+      `acao: ${iploc.headers.get('access-control-allow-origin') ?? 'absent'}`,
+    );
 
     const geoBad = await fetch(`${base}/geocode`);
     check('/geocode requires a query', geoBad.status === 400, `status ${geoBad.status}`);
@@ -326,10 +341,17 @@ try {
       `status ${geo.status}, results ${gj?.results?.length ?? '-'}`,
     );
     check('GET /health advertises /geocode', (health?.routes ?? []).some((r) => r.startsWith('/geocode')), `${(health?.routes ?? []).length} routes`);
+    check('GET /health advertises /county-outlook', (health?.routes ?? []).some((r) => r.startsWith('/county-outlook')), `${(health?.routes ?? []).length} routes`);
     check('the dashboard offers place-name search', homeBody.includes('id="psearch"') && homeBody.includes('id="psearchgo"'), 'search row present');
 
     const missing = await fetch(`${base}/nope`);
     check('unknown route 404s', missing.status === 404, `status ${missing.status}`);
+    const missingFile = await fetch(`${base}/definitely-not-here.json`);
+    check(
+      'a missing file-like path 404s as JSON, not as the SPA-fallback dashboard',
+      missingFile.status === 404 && String(missingFile.headers.get('content-type') ?? '').includes('json'),
+      `status ${missingFile.status}, ct ${missingFile.headers.get('content-type') ?? '?'}`,
+    );
   }
 } catch (err) {
   check('probe run', false, String(err?.message ?? err));

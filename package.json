@@ -16,9 +16,10 @@
     "dedash:check": "node scripts/dedash.mjs --check",
     "smoke": "node scripts/smoke-worker.mjs",
     "probe": "node scripts/probe-local.mjs",
-    "probe:live": "node scripts/probe-local.mjs --base https://msimu.shikunyi.workers.dev",
-    "deploy:dry": "wrangler deploy --config worker/wrangler.toml --dry-run",
-    "deploy": "wrangler deploy --config worker/wrangler.toml",
+    "probe:live": "node scripts/probe-local.mjs --base https://msimu.pages.dev",
+    "deploy:dry": "node scripts/build-worker-assets.mjs && wrangler deploy --config worker/wrangler.toml --dry-run",
+    "deploy": "wrangler pages deploy web --project-name msimu",
+    "deploy:worker-legacy": "node scripts/build-worker-assets.mjs && wrangler deploy --config worker/wrangler.toml",
     "serve": "node scripts/serve-local.mjs",
     "dev": "wrangler dev worker/index.mjs"
   },

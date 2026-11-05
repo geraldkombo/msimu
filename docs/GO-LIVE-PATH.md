@@ -34,9 +34,9 @@ Three channels, all live right now, no money, no keys:
 
 | Channel | Who uses it | Status |
 |---|---|---|
-| Web dashboard (msimu.shikunyi.workers.dev) | Extension officers, farmers with any smartphone browser on mobile data | LIVE, 118/118 automated checks |
+| Web dashboard (msimu.pages.dev) | Extension officers, farmers with any smartphone browser on mobile data | LIVE, 123/123 automated checks |
 | WhatsApp/SMS share button | Any farmer: officer builds the plan, shares it to a phone | LIVE (Web Share API + clipboard fallback) |
-| JSON API (14 routes) | Counties, NGOs, other apps building on top | LIVE |
+| JSON API (15 routes) | Counties, NGOs, other apps building on top | LIVE |
 
 ## 3. USSD: the honest, sourced path from demo to real phones
 
@@ -45,14 +45,24 @@ use: HTTP POST, form-encoded `sessionId`, `phoneNumber`, `text`, `serviceCode`;
 response is plain text starting with `CON` (continue) or `END` (terminate).
 Verified against Africa's Talking documentation and guides (fetched 5 Nov 2026).
 
-**Step 1 - free sandbox demo (cost: $0, available today).**
+**Step 1 - the on-page USSD simulator (cost: $0, live right now, no account, no key).**
+The dashboard at `https://msimu.pages.dev` carries a phone frame that POSTs to
+the exact same `/ussd` endpoint a licensed gateway would call, in the
+dashboard's current language and for its current ward. This is what we demo at
+the hackathon: no signup, no third party, nothing to provision.
+
+**Step 1b - optional: free Africa's Talking sandbox (cost: $0, needs an account and an API key).**
 Africa's Talking gives every account a free sandbox with a browser-based phone
 simulator: "The Sandbox is free for development and testing. You only start
 paying once you provision a real shortcode" (helloduty.com/blogs/getting-started-with-the-africas-talking-ussd-api,
 fetched 5 Nov 2026). Setup, per mctaba.com/kb/ussd-app-development-kenya (fetched
 5 Nov 2026): create account -> Sandbox app -> USSD -> Create Channel -> point
-the callback URL at `https://msimu.shikunyi.workers.dev/ussd` -> dial the
-simulator. No real phone, no cost. This is what we demo at the hackathon.
+the callback URL at `https://msimu.pages.dev/ussd` -> dial the
+simulator. Caveat: the sandbox posts only `sessionId`, `phoneNumber`, `text`
+and `serviceCode` - with no `ward` in the body the plan always falls back to
+the Gataka demo site, so it proves protocol compatibility, not ward-specific
+plans. It also breaks the zero-keys house rule, which is why the on-page
+simulator is the demo and the sandbox is optional.
 
 **Step 2 - real shortcode on real phones (cost: money, deliberately deferred).**
 Public rate cards fetched 5 Nov 2026:

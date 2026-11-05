@@ -6,6 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 
 # Static dashboard is served from the same origin as the API, so the page's
 # relative fetch("/advisory") works with no CORS config and no second project.
+# The directory is a build artifact (npm run deploy:worker-legacy runs
+# scripts/build-worker-assets.mjs first): web/ itself contains _worker.js, the
+# Pages-only entry file that Workers assets validation rejects.
 #
 # The `binding` line is required, not decoration: /locate does point-in-polygon
 # against the ward GeoJSON, and inside a Worker neither env.ASSETS nor a
@@ -13,7 +16,7 @@ compatibility_flags = ["nodejs_compat"]
 # every lookup silently degrades to the nearest-centroid guess while still
 # returning a plausible ward name.
 [assets]
-directory = "../web"
+directory = "../dist/worker-web"
 binding = "ASSETS"
 
 # Workers AI free allowance (10,000 neurons/day, $0, no key) powers the

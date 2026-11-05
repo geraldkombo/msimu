@@ -1,0 +1,21 @@
+# Cloudflare Pages deployment - canonical URL: https://msimu.pages.dev
+#
+# Static assets come from web/; web/_worker.js (advanced mode) is the single
+# entry point and delegates every non-asset request to worker/index.mjs - the
+# same handler the Workers build uses, so the two deploy targets cannot
+# drift. The workers.dev subdomain on this account carries an unrelated
+# personal name, which is why the project moved to Pages, where the URL is
+# the product name itself.
+name = "msimu"
+pages_build_output_dir = "web"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Workers AI free allowance (10,000 neurons/day, $0, no key) powers the
+# roof-photo material check. The keyless fallback lane inside worker/index.mjs
+# takes over automatically if the binding is ever unavailable.
+[ai]
+binding = "AI"
+
+[observability]
+enabled = true

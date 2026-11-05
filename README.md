@@ -10,16 +10,17 @@ Most climate products in the region are dashboards. They show rainfall to a user
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Dependencies: zero](https://img.shields.io/badge/dependencies-zero-brightgreen)](./package.json)
 
-**Live:** <https://msimu.shikunyi.workers.dev> - dashboard, JSON API and USSD endpoint on one Cloudflare Worker. Country-wide build on the finished 403-cell normals pack (version `0d99597b`): food-security plan with KNBS county household defaults, flat-dweller mode, roof length x width with material and photo check, the verification desk, WhatsApp sharing, English-first dashboard, USSD food screen, roof-photo material check on the Cloudflare Workers AI free allowance (phone photo or a satellite capture of the spot that refuses blank imagery and never auto-fills on low confidence), GPS-with-IP-fallback location that works indoors, satellite basemap on the ward map, and OpenStreetMap surroundings analysis that auto-suggests the food-form inputs - verified with `npm run probe:live` (118/118 checks).
+**Live:** <https://msimu.pages.dev> - dashboard, JSON API and USSD endpoint on one Cloudflare Pages deployment (msimu.pages.dev). Country-wide build on the finished 403-cell normals pack (version `0d99597b`): food-security plan with KNBS county household defaults, flat-dweller mode, roof length x width with material and photo check, the verification desk, WhatsApp sharing, English-first dashboard, USSD food screen, an on-page USSD phone simulator that runs the real gateway endpoint for free, roof-photo material check on the Cloudflare Workers AI free allowance (phone photo or a satellite capture of the spot that refuses blank imagery and never auto-fills on low confidence), GPS-with-IP-fallback location that works indoors, satellite basemap on the ward map, and OpenStreetMap surroundings analysis that auto-suggests the food-form inputs - verified with `npm run probe:live` (123/123 checks).
 
 ---
 
 ## Run it in two commands
 
 No `npm install`. There is nothing to install - the engine uses only Node built-ins.
+Deploying needs the `wrangler` CLI (`npm i -g wrangler`, v4+) - a machine-level tool, never a project dependency.
 
 ```bash
-node --test "tests/*.test.mjs"                 # 168 tests, all offline, no network
+node --test "tests/*.test.mjs"                 # 174 tests, all offline, no network
 node src/cli.mjs --ward kajiado--nkaimurunya   # live advisory for any ward in Kenya
 ```
 
@@ -34,10 +35,11 @@ node src/cli.mjs --site gataka --irrigation                 # assume irrigation 
 node src/cli.mjs --site gataka --json                       # machine-readable
 node scripts/smoke-worker.mjs                               # exercise every HTTP + USSD route
 npm run verify-bands                                        # leave-one-out verification of the tercile bands
-npm run probe                                               # 118 end-to-end HTTP checks: dashboard + API + USSD
-npm run probe:live                                          # the same 118 checks against the deployed Worker
+npm run probe                                               # 123 end-to-end HTTP checks: dashboard + API + USSD
+npm run probe:live                                          # the same 123 checks against the deployed Pages build
 npm run deploy:dry                                          # bundle check, no upload (needs wrangler login)
-npm run deploy                                              # deploy Worker + dashboard assets to Cloudflare
+npm run deploy                                              # deploy to Cloudflare Pages (canonical: https://msimu.pages.dev)
+npm run deploy:worker-legacy                                # legacy Workers build on the old workers.dev subdomain
 npm run serve                                               # dashboard + API on http://localhost:8080
 npm run wards                                               # re-fetch all 47 county boundary files (geoBoundaries)
 npm run normals                                             # build/extend ERA5 normals per grid cell (resumable)
@@ -191,15 +193,15 @@ Every stage is a pure function over plain data. No database, no framework, no bu
 | `src/households.mjs` | KNBS 2019 average household size per county: default `people` for the food plan, rounded up, with the basis recorded in every payload |
 | `src/helpdesk.mjs` | the verification desk: who confirms the plan (sub-county agriculture office, KEPHIS seed sticker check, KALRO selector, NDMA bulletin, county contacts page), bilingual, linked, no invented phone numbers; shipped as `verify_with` in every food payload |
 | `src/surroundings.mjs` | pure surroundings analyzer: OSM API XML to elements, building and land-use rings, dwelling and roof-material suggestions labelled `osm_heuristic` with reasons, honest null when nothing is mapped |
-| `worker/index.mjs` | Cloudflare Worker: `/health`, `/counties`, `/wards`, `/county-outlook`, `/locate`, `/forecast`, `/advisory`, `/kitchen`, `/skill`, `/food-security`, `/surroundings`, `/ip-location`, `POST /photo-roof`, `POST /ussd` (14 routes) |
-| `web/index.html` | Extension-officer dashboard: county and ward pickers, Leaflet ward choropleth + OpenStreetMap, 7-month table, point lookup (GPS with a labelled city-level IP fallback when no fix, e.g. indoors), surroundings auto-suggest for the food form (dwelling and roof material from what OSM has mapped around the point, always confirm-by-eye), kitchen-garden advice, model accuracy scoreboard, food-security planner, SW/EN, Leaflet vendored locally (zero third-party requests at runtime), no build step |
+| `worker/index.mjs` | Cloudflare Worker: `/health`, `/counties`, `/wards`, `/county-outlook`, `/locate`, `/forecast`, `/advisory`, `/kitchen`, `/skill`, `/food-security`, `/surroundings`, `/ip-location`, `/geocode`, `POST /photo-roof`, `POST /ussd` (15 routes) |
+| `web/index.html` | Extension-officer dashboard: county and ward pickers, Leaflet ward choropleth + OpenStreetMap, 7-month table, point lookup (GPS with a labelled city-level IP fallback when no fix, e.g. indoors), surroundings auto-suggest for the food form (dwelling and roof material from what OSM has mapped around the point, always confirm-by-eye), kitchen-garden advice, model accuracy scoreboard, food-security planner, SW/EN, Leaflet vendored locally (the only third-party requests at runtime are the OSM/Esri map tiles themselves), no build step |
 | `web/boundaries/*.geojson` | 47 county ward files + a simplified national county layer, geoBoundaries CC BY 4.0, attribution stamped in each file |
 | `web/data/wards-index.json` | dashboard registry: counties, ward slugs and their ERA5 cells (no geometry) |
 | `data/wards.json` | the climate pack: ERA5 2005-2024 normals and tercile bands per 0.25-degree cell, plus every ward's cell assignment |
 | `scripts/fetch-boundaries.mjs` | Reproducible country-wide boundary fetch: ADM1/ADM2/ADM3, county split, attribution stamping, cached downloads |
 | `scripts/build-normals.mjs` | Builds ERA5 normals per grid cell, resumable and cached, with nearest-cell fallback labelled by distance |
 | `scripts/check-wards.mjs` | Offline integrity check: 47 counties, 1452 wards, licences, sizes, precision, pack coverage |
-| `scripts/probe-local.mjs` | 118 end-to-end HTTP checks against the local server or the deployed Worker (`--base`) |
+| `scripts/probe-local.mjs` | 123 end-to-end HTTP checks against the local server or the deployed Pages build (`--base`) |
 | `docs/FOOD-SECURITY-SOURCES.md` | every food-security constant and gate mapped to its Kenyan dataset, with verbatim evidence and fetch dates |
 | `docs/KENYA-VERIFICATION-DESK.md` | every verification-desk entry mapped to its public, fetchable source, with fetch dates |
 | `docs/knbs-2019-household-size-by-county.md` | KNBS 2019 census household-size table for all 47 counties behind the `people=` defaults, with provenance |
@@ -218,8 +220,8 @@ The service is free to *run* as well as free to *use* - which is the actual sust
 |---|---|---|
 | Forecast + baseline | Open-Meteo Seasonal & Archive APIs | $0, no key, no signup |
 | Runtime | Node 22+ built-ins only | $0, no dependencies |
-| API host | Cloudflare Workers free tier | $0 |
-| Static dashboard | Served from the **same** Worker via `[assets]` - one `*.workers.dev` URL, no separate project, no domain purchase | $0 |
+| API host | Cloudflare Pages free tier | $0 |
+| Static dashboard | Served from the **same** Pages deployment (`web/` + `web/_worker.js`) - one `msimu.pages.dev` URL, no separate project, no domain purchase | $0 |
 | Feedback store | Cloudflare D1 free tier | $0 |
 | Maps | Leaflet + OpenStreetMap | $0 |
 | Ward boundaries | geoBoundaries ADM1/ADM2/ADM3 (CC BY 4.0), split into 47 county files and committed | $0, no key |
@@ -251,18 +253,18 @@ Stated plainly, because a climate service that overstates itself is worse than n
 
 - [x] Tercile engine, crop and livestock rules, Swahili/English localization, CLI
 - [x] Partial-month exclusion, median-based anomaly, unknown-tercile handling
-- [x] Cloudflare Worker with `/forecast`, `/advisory`, `POST /ussd`
+- [x] Cloudflare Pages deployment with `/forecast`, `/advisory`, `POST /ussd`
 - [x] Ward dashboard: Leaflet + OpenStreetMap map, 7-month tercile table with median markers, localized advisory, SW/EN toggle - no build step, served from the same Worker origin
 - [x] Ward choropleth: all 47 counties and 1452 wards from geoBoundaries (CC BY 4.0), full-resolution per-county files, every ward coloured from one `/county-outlook` call
 - [x] Country-wide climate pack: ERA5 2005-2024 normals and tercile bands per 0.25-degree cell, ward-to-cell assignment, agro-ecology zones, nearest-cell provenance
 - [x] Leave-one-out verification of the tercile bands (agreement, Heidke Skill Score, short-baseline sensitivity, collapsed-band detection)
-- [x] Deployed to Cloudflare: <https://msimu.shikunyi.workers.dev> - Worker + dashboard assets on one origin, verified live with `npm run probe:live` (118/118)
+- [x] Deployed to Cloudflare: <https://msimu.pages.dev> - Pages advanced-mode `_worker.js` + dashboard assets on one origin, verified live with `npm run probe:live` (123/123)
 - [x] House style enforced by code: `npm run dedash:check` fails the build if a long dash appears anywhere
 - [x] Finish the ERA5 cell cache (403 of 403 cells built 1 November 2026; `npm run normals` is resumable and rate-limit aware)
 - [ ] County-specific crop packs beyond Kajiado, sourced per agro-ecological zone
-- [ ] Browser-verify the dashboard render and capture a screenshot (the API contract and served HTML are verified; the rendered pixels are not)
+- [x] Browser-verified the dashboard render on the live deployment (5 Nov E2E: ward + point flows, USSD simulator in both locales, food-plan visuals, computed-style palette assertions, 0 console errors; pixel screenshots are unavailable in the headless session)
 - [ ] Extension-officer feedback view (farmer replies aggregated by ward)
-- [ ] USSD sandbox walkthrough recording and screenshots
+- [ ] USSD simulator walkthrough recording and screenshots (the on-page simulator replaced the third-party sandbox as the demo path)
 - [ ] Native-speaker review of all Swahili strings
 - [ ] Maa and Kikuyu localization for pastoralist and mixed-farming communities
 

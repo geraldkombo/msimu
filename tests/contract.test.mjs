@@ -81,17 +81,35 @@ test('the dashboard renders terciles for every month the engine returns', () => 
   }
 });
 
-test('wrangler assets point at a dashboard that exists', () => {
+test('the legacy Worker assets are a build of web/ without the Pages entry', () => {
   const toml = read('worker/wrangler.toml');
   const m = toml.match(/directory\s*=\s*"([^"]+)"/);
   assert.ok(m, 'worker/wrangler.toml must configure an assets directory');
-  const dir = resolve(root, 'worker', m[1]);
-  assert.ok(existsSync(join(dir, 'index.html')), `assets directory ${dir} has no index.html`);
+  // Workers assets validation rejects _worker.js ("legacy pages worker asset"),
+  // so the legacy target deploys a copy of web/ built by a script that strips
+  // exactly that file. web/ itself stays the single source of truth.
+  assert.equal(m[1], '../dist/worker-web', 'the legacy Worker must deploy the built copy, never web/ directly');
+  assert.ok(existsSync(join(root, 'web', 'index.html')), 'web/ (the build source) has no index.html');
+  const build = read('scripts/build-worker-assets.mjs');
+  assert.ok(build.includes("_worker.js"), 'the build script must name the file it strips');
+  assert.ok(build.includes('cpSync'), 'the build script must copy, not move: web/ stays intact');
+});
+
+test('the Pages deployment shares the exact same handler as the Worker', () => {
+  const toml = read('wrangler.toml');
+  assert.match(toml, /pages_build_output_dir\s*=\s*"web"/, 'root wrangler.toml must deploy web/ as a Pages build');
+  assert.match(toml, /binding\s*=\s*"AI"/, 'Pages needs the Workers AI binding for the roof-photo check');
+  const entry = read('web/_worker.js');
+  assert.match(entry, /import\s*\{\s*handle\s*\}\s*from\s*'\.\.\/worker\/index\.mjs'/, 'the Pages entry must call the Worker handler, never a copy of it');
+  assert.ok(entry.includes('env.ASSETS.fetch(request)'), 'file-like GETs must be served from the asset manifest');
+  assert.ok(entry.includes('isFile'), 'the entry must split API routes from assets explicitly - the Pages SPA fallback never 404s, so asset-first probing silently breaks every API GET');
+  assert.ok(entry.includes('htmlMiss') && entry.includes('text/html'), 'a text/html answer on a non-HTML path is the SPA fallback in disguise and must fall through to the JSON 404');
+  assert.ok(!existsSync(join(root, 'functions')), 'no functions/ dir: _worker.js advanced mode is the single Pages entry');
 });
 
 test('the dashboard is dependency-free and needs no build step', () => {
   assert.ok(!html.includes('<script src="./'), 'no local bundle expected');
-  assert.ok(html.includes('leaflet'), 'map library is Leaflet from a CDN');
+  assert.ok(html.includes('leaflet'), 'map library is Leaflet, vendored same-origin');
   const pkg = JSON.parse(read('package.json'));
   assert.deepEqual({ ...pkg.dependencies, ...pkg.devDependencies }, {}, 'msimu must stay dependency-free');
   assert.ok(!existsSync(join(root, 'package-lock.json')), 'no lockfile: nothing to install');
