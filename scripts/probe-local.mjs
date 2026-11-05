@@ -78,9 +78,11 @@ try {
     check('no county is hardcoded into the dashboard', !homeBody.includes('kajiado-wards.geojson'));
     check('dashboard has legend + attribution nodes', homeBody.includes('id="legend"') && homeBody.includes('id="ward-attrib"'));
     check('dashboard has the food-security planner', homeBody.includes('id="bfood"') && homeBody.includes('id="fdwelling"') && homeBody.includes('id="bshare"') && homeBody.includes('id="fmat"') && homeBody.includes('id="bphoto"') && homeBody.includes('id="bsat"') && homeBody.includes('id="pnoon"') && homeBody.includes('id="surround-status"') && homeBody.includes('id="base-sat"') && homeBody.includes('/food-security?'));
+    check('dashboard visualises the food plan: stance banner, lean calendar, water budget, derivation panel', homeBody.includes('id="food-stance"') && homeBody.includes('lean-cal') && homeBody.includes('foodTankWhyRoof') && homeBody.includes('id="food-how"'));
     check('dashboard defaults to English', homeBody.includes('id="en" aria-pressed="true"') && homeBody.includes("let lang = 'en'"));
     check('dashboard attributes geoBoundaries', homeBody.includes('geoBoundaries'));
     check('dashboard has a main landmark and live status regions', homeBody.includes('<main>') && homeBody.includes('aria-live="polite"'));
+    check('the table explains its own numbers and the irrigation switch', homeBody.includes('id="howto-read"') && homeBody.includes('id="irr-hint"') && homeBody.includes('factBelow') && homeBody.includes('readTitle'));
     check('dashboard discloses borrowed ERA5 cells', /nearestCell/.test(homeBody));
 
     // Country-wide catalogue
@@ -236,6 +238,11 @@ try {
     const foodWard = await fetch(`${base}/food-security?ward=kajiado--nkaimurunya&roof=30&people=4&lang=en`);
     const fw = await foodWard.json().catch(() => null);
     check('GET /food-security builds a ward household plan', foodWard.ok && fw?.data_status === 'planning_heuristic' && (fw?.lines?.length ?? 0) > 2, `status ${foodWard.status}, ${fw?.lines?.length ?? 0} lines`);
+    check(
+      'the food plan ships its derivations so no number renders unexplained',
+      fw?.water?.tank_basis?.method === 'cumulative_drawdown' && fw?.water?.drinking_l_per_person_day === 15 && 'water_balance_pct' in (fw ?? {}) && (fw?.planting?.skip ?? []).every((s) => s.en && s.sw && s.reason),
+      `tank ${fw?.water?.tank_litres ?? '?'} L via ${fw?.water?.tank_basis?.method ?? '?'}`,
+    );
     check('ward plan uses the normals-based lean analysis', fw?.lean?.basis === 'rain_vs_et0_normals' && Number.isFinite(fw?.lean?.longest_streak), `${fw?.lean?.basis ?? '?'} streak ${fw?.lean?.longest_streak ?? '?'}`);
     check('the plan ships its Kenyan dataset sources', (fw?.sources ?? []).length >= 6 && (fw?.sources ?? []).some((s) => /spherestandards/.test(s.url ?? '')), `${(fw?.sources ?? []).length} sources`);
 

@@ -209,20 +209,20 @@ export function planCrops({ run, tercile = 'unknown', waterBalancePct = null, cr
     // it, the honest reason is water, even where the pack also flags it as
     // not rainfed.
     if (id === 'maize' && Number.isFinite(waterBalancePct) && waterBalancePct < MAIZE_WATER_BALANCE_FLOOR) {
-      skip.push({ id, reason: 'water_balance' });
+      skip.push({ id, en: c.en, sw: c.sw, reason: 'water_balance' });
       continue;
     }
     if (c.rainfed_ok !== true || c.irrigation_required === true) {
-      skip.push({ id, reason: 'irrigation_only' });
+      skip.push({ id, en: c.en, sw: c.sw, reason: 'irrigation_only' });
       continue;
     }
     if ((TOLERANCE_RANK[c.drought_tolerance] ?? 0) < minTolerance) {
-      skip.push({ id, reason: 'drought_risk' });
+      skip.push({ id, en: c.en, sw: c.sw, reason: 'drought_risk' });
       continue;
     }
     const late = c.maturity_days?.[1] ?? Infinity;
     if (!run || late > wetDays) {
-      skip.push({ id, reason: 'maturity_too_long' });
+      skip.push({ id, en: c.en, sw: c.sw, reason: 'maturity_too_long' });
       continue;
     }
     plant.push({
@@ -287,7 +287,15 @@ export function waterPlan({ rows, site, roof_m2, people }) {
     roof_m2: roof,
     people: ppl,
     litres_per_mm_per_m2: CATCH_L_PER_MM_PER_M2,
+    drinking_l_per_person_day: DRINKING_L_PER_PERSON_DAY,
     tank_litres: Math.ceil(sized / 100) * 100,
+    // The derivation travels with the number: a UI that shows the tank size
+    // must be able to show WHY it is that size, from these exact fields.
+    tank_basis: {
+      method: roof > 0 ? 'cumulative_drawdown' : 'worst_single_month',
+      litres_raw: Math.round(sized),
+      worst_month: roof > 0 ? worst : worstGap,
+    },
     worst_month: roof > 0 ? worst : worstGap,
     monthly,
   };
@@ -339,7 +347,11 @@ export function buildFoodSecurityPlan({
         months: below.map((r) => r.calendar_month ?? calendarMonth(r.month)),
       };
 
-  const run = wetRunFrom(rows, site, now);
+  const rawRun = wetRunFrom(rows, site, now);
+  // The window carries its own gate: the rain depth a month needs to count as
+  // plantable here (FAO half-ET0 where normals exist, 30 mm floor otherwise),
+  // so the UI can state the rule instead of showing an unexplained window.
+  const run = rawRun ? { ...rawRun, threshold_mm: Math.round(wetThresholdMm(site, calendarMonth(rawRun.start))) } : null;
   const planting = planCrops({
     run,
     tercile: run?.tercile ?? 'unknown',
@@ -397,6 +409,7 @@ export function buildFoodSecurityPlan({
     verify_with: VERIFY_WITH,
     stance,
     below_months: below.length,
+    water_balance_pct: site?.annual?.water_balance_pct ?? null,
     lean,
     planting,
     water,

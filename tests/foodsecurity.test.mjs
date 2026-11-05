@@ -310,3 +310,29 @@ test('the plan ships the verification desk with every payload', () => {
   assert.ok(plan.verify_with.some((v) => v.id === 'kephis_seed'));
   assert.deepEqual(plan.verify_with, VERIFY_WITH);
 });
+
+test('the payload exposes the facts the dashboard visualises, so no number renders unexplained', () => {
+  const plan = buildFoodSecurityPlan({ site: wardTarget, outlook: { months: sevenNear }, crops, locale: 'en', now: '2026-11' });
+  // Water balance ships at the top level so the maize exclusion can quote it.
+  assert.equal(plan.water_balance_pct, 38);
+  // wardTarget ET0 = 100 -> the FAO half-ET0 gate is 50 mm, stated in the window.
+  assert.equal(plan.planting.window?.threshold_mm, 50);
+  // The tank size carries its derivation: method, raw litres, worst month.
+  assert.equal(plan.water.tank_basis.method, 'cumulative_drawdown');
+  assert.equal(plan.water.tank_basis.worst_month, plan.water.worst_month);
+  assert.equal(plan.water.drinking_l_per_person_day, 15, 'the Sphere allowance ships with the payload so no UI hardcodes it');
+  assert.ok(Number.isFinite(plan.water.tank_basis.litres_raw));
+  assert.equal(plan.water.tank_litres, Math.ceil(plan.water.tank_basis.litres_raw / 100) * 100);
+  const bought = waterPlan({ rows: sevenNear, site: wardTarget, roof_m2: 0, people: 4 });
+  assert.equal(bought.tank_basis.method, 'worst_single_month');
+  // Skips carry the crop's own names so the UI can explain exclusions without
+  // a second copy of the crop pack.
+  const maize = plan.planting.skip.find((s) => s.id === 'maize');
+  assert.equal(maize.reason, 'water_balance');
+  assert.equal(maize.en, 'Maize');
+  assert.equal(maize.sw, 'Mahindi');
+  for (const s of plan.planting.skip) {
+    assert.ok(s.en && s.sw, `every skip entry is nameable in both languages: ${s.id}`);
+    assert.ok(['water_balance', 'irrigation_only', 'drought_risk', 'maturity_too_long'].includes(s.reason));
+  }
+});

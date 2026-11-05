@@ -98,8 +98,17 @@ test('the dashboard is dependency-free and needs no build step', () => {
 });
 
 test('the dashboard states the forecast caveat instead of hiding it', () => {
-  for (const locale of ['sw', 'en']) {
-    const block = html.slice(html.indexOf(`${locale}: {`), html.indexOf(`${locale}: {`) + 4000);
+  // Slice the real locale block (up to the sibling locale's opening), not a
+  // fixed character window: the dictionaries grow as features are explained,
+  // and the disclosure must live inside the block, wherever in it that is.
+  const localeBlock = (locale, other) => {
+    const start = html.indexOf(`${locale}: {`);
+    let end = html.indexOf(`\n  ${other}: {`, start);
+    if (end < 0) end = start + 20000;
+    return html.slice(start, end);
+  };
+  for (const [locale, other] of [['sw', 'en'], ['en', 'sw']]) {
+    const block = localeBlock(locale, other);
     assert.ok(block.includes('bias-corrected'), `${locale} must disclose that SEAS5 is not bias-corrected`);
   }
   assert.ok(html.includes('afisa kilimo wa kata'), 'sw must refer the farmer to the ward extension officer');

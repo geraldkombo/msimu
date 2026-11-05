@@ -10,7 +10,7 @@ Most climate products in the region are dashboards. They show rainfall to a user
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Dependencies: zero](https://img.shields.io/badge/dependencies-zero-brightgreen)](./package.json)
 
-**Live:** <https://msimu.shikunyi.workers.dev> - dashboard, JSON API and USSD endpoint on one Cloudflare Worker. Country-wide build on the finished 403-cell normals pack (version `0d99597b`): food-security plan with KNBS county household defaults, flat-dweller mode, roof length x width with material and photo check, the verification desk, WhatsApp sharing, English-first dashboard, USSD food screen, roof-photo material check on the Cloudflare Workers AI free allowance (phone photo or a satellite capture of the spot that refuses blank imagery and never auto-fills on low confidence), GPS-with-IP-fallback location that works indoors, satellite basemap on the ward map, and OpenStreetMap surroundings analysis that auto-suggests the food-form inputs - verified with `npm run probe:live` (115/115 checks).
+**Live:** <https://msimu.shikunyi.workers.dev> - dashboard, JSON API and USSD endpoint on one Cloudflare Worker. Country-wide build on the finished 403-cell normals pack (version `0d99597b`): food-security plan with KNBS county household defaults, flat-dweller mode, roof length x width with material and photo check, the verification desk, WhatsApp sharing, English-first dashboard, USSD food screen, roof-photo material check on the Cloudflare Workers AI free allowance (phone photo or a satellite capture of the spot that refuses blank imagery and never auto-fills on low confidence), GPS-with-IP-fallback location that works indoors, satellite basemap on the ward map, and OpenStreetMap surroundings analysis that auto-suggests the food-form inputs - verified with `npm run probe:live` (118/118 checks).
 
 ---
 
@@ -34,8 +34,8 @@ node src/cli.mjs --site gataka --irrigation                 # assume irrigation 
 node src/cli.mjs --site gataka --json                       # machine-readable
 node scripts/smoke-worker.mjs                               # exercise every HTTP + USSD route
 npm run verify-bands                                        # leave-one-out verification of the tercile bands
-npm run probe                                               # 115 end-to-end HTTP checks: dashboard + API + USSD
-npm run probe:live                                          # the same 115 checks against the deployed Worker
+npm run probe                                               # 118 end-to-end HTTP checks: dashboard + API + USSD
+npm run probe:live                                          # the same 118 checks against the deployed Worker
 npm run deploy:dry                                          # bundle check, no upload (needs wrangler login)
 npm run deploy                                              # deploy Worker + dashboard assets to Cloudflare
 npm run serve                                               # dashboard + API on http://localhost:8080
@@ -199,7 +199,7 @@ Every stage is a pure function over plain data. No database, no framework, no bu
 | `scripts/fetch-boundaries.mjs` | Reproducible country-wide boundary fetch: ADM1/ADM2/ADM3, county split, attribution stamping, cached downloads |
 | `scripts/build-normals.mjs` | Builds ERA5 normals per grid cell, resumable and cached, with nearest-cell fallback labelled by distance |
 | `scripts/check-wards.mjs` | Offline integrity check: 47 counties, 1452 wards, licences, sizes, precision, pack coverage |
-| `scripts/probe-local.mjs` | 115 end-to-end HTTP checks against the local server or the deployed Worker (`--base`) |
+| `scripts/probe-local.mjs` | 118 end-to-end HTTP checks against the local server or the deployed Worker (`--base`) |
 | `docs/FOOD-SECURITY-SOURCES.md` | every food-security constant and gate mapped to its Kenyan dataset, with verbatim evidence and fetch dates |
 | `docs/KENYA-VERIFICATION-DESK.md` | every verification-desk entry mapped to its public, fetchable source, with fetch dates |
 | `docs/knbs-2019-household-size-by-county.md` | KNBS 2019 census household-size table for all 47 counties behind the `people=` defaults, with provenance |
@@ -256,7 +256,7 @@ Stated plainly, because a climate service that overstates itself is worse than n
 - [x] Ward choropleth: all 47 counties and 1452 wards from geoBoundaries (CC BY 4.0), full-resolution per-county files, every ward coloured from one `/county-outlook` call
 - [x] Country-wide climate pack: ERA5 2005-2024 normals and tercile bands per 0.25-degree cell, ward-to-cell assignment, agro-ecology zones, nearest-cell provenance
 - [x] Leave-one-out verification of the tercile bands (agreement, Heidke Skill Score, short-baseline sensitivity, collapsed-band detection)
-- [x] Deployed to Cloudflare: <https://msimu.shikunyi.workers.dev> - Worker + dashboard assets on one origin, verified live with `npm run probe:live` (115/115)
+- [x] Deployed to Cloudflare: <https://msimu.shikunyi.workers.dev> - Worker + dashboard assets on one origin, verified live with `npm run probe:live` (118/118)
 - [x] House style enforced by code: `npm run dedash:check` fails the build if a long dash appears anywhere
 - [x] Finish the ERA5 cell cache (403 of 403 cells built 1 November 2026; `npm run normals` is resumable and rate-limit aware)
 - [ ] County-specific crop packs beyond Kajiado, sourced per agro-ecological zone

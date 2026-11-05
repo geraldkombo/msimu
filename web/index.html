@@ -93,6 +93,7 @@
   header button[aria-pressed="true"] { background: #f0ede1; border-color: #f0ede1; color: var(--forest); }
   .switch { display: flex; border: 1px solid #3b5d4d; border-radius: 9px; overflow: hidden; }
   .switch button { border: 0; border-radius: 0; }
+  #irr-hint { flex-basis: 100%; margin: -8px 0 0; font-size: 12px; color: #a9bfae; }
 
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; margin-top: 22px; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
@@ -198,7 +199,51 @@
   ul.advice li { margin-bottom: 9px; }
   ul.advice li::marker { color: var(--leaf); }
 
+  details#howto-read { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--sand); }
+  details#howto-read summary { cursor: pointer; font-weight: 650; font-size: 13.5px; color: var(--leaf-dark); }
+  details#howto-read ul { margin: 10px 0 4px; padding-left: 18px; font-size: 13px; }
+  details#howto-read li { margin-bottom: 8px; }
+  details#howto-read li::marker { color: var(--leaf); }
+
   .foodform { background: var(--sand); border: 1px solid var(--line); border-radius: 11px; padding: 13px; }
+
+  /* Food plan visuals: stance banner, lean calendar, water budget, tank card.
+     Every one of these renders numbers straight out of the /food-security
+     payload; nothing here invents a figure or hides one. */
+  .stance { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 12px 15px; border-radius: 11px; margin-bottom: 16px; font-weight: 700; font-size: 15px; }
+  .stance em { font-style: normal; font-weight: 500; font-size: 12.5px; }
+  .stance.prepare_now { background: #f4e3cd; border: 1px solid #d3ab74; color: #6d4310; }
+  .stance.caution { background: #ecebe1; border: 1px solid #c2bda9; color: #45433a; }
+  .stance.good_season { background: #dfeee3; border: 1px solid #a5c8ad; color: #1f5130; }
+  .stance.unknown { background: #ecebe1; border: 1px solid #c2bda9; color: #45433a; }
+  .lean-cal { display: grid; gap: 4px; margin: 8px 0 5px; }
+  .lean-cal div { text-align: center; padding: 8px 2px; border-radius: 7px; font-size: 11.5px; font-weight: 700; }
+  .lean-cal .dry { background: #e6d2b5; color: #6d4310; border: 1px solid #d3ab74; }
+  .lean-cal .wet { background: #d8e7f1; color: #1b5e8a; border: 1px solid #b0c9dc; }
+  .lean-cal .unk { background: var(--sand); color: var(--ink-2); border: 1px solid var(--line); }
+  .wbud { margin: 10px 0; }
+  .wbud .wrow { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; font-size: 12.5px; }
+  .wbud .wrow b { width: 66px; flex: none; font-weight: 650; }
+  .wbud .wtrack { position: relative; flex: 1; height: 18px; background: var(--sand); border-radius: 6px; min-width: 80px; }
+  .wbud .sup { position: absolute; left: 0; top: 1px; height: 7px; background: #2278a8; border-radius: 4px; }
+  .wbud .dem { position: absolute; left: 0; bottom: 1px; height: 7px; background: #8b8f94; border-radius: 4px; }
+  .wbud .wrow em { width: 94px; flex: none; text-align: right; font-style: normal; font-variant-numeric: tabular-nums; font-weight: 650; }
+  .wbud .wrow em.gap { color: #b23c17; }
+  .wbud .wrow em.ok { color: #2e6b40; }
+  .tankcard { border: 1px solid var(--line); border-left: 4px solid #2278a8; border-radius: 10px; padding: 12px 15px; margin: 12px 0; }
+  .tankcard .big { font-size: 27px; font-weight: 900; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .tankcard .why { font-size: 12.5px; color: var(--ink-2); margin: 6px 0 0; line-height: 1.5; }
+  #food-result h3 { font-size: 15px; margin: 20px 0 6px; font-weight: 750; }
+  #food-result h3:first-child { margin-top: 0; }
+  ul.skips { margin: 8px 0; padding-left: 18px; font-size: 13px; color: var(--ink-2); }
+  ul.skips li { margin-bottom: 5px; }
+  ul.skips li::marker { color: var(--alert); }
+  details.plain { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; background: var(--sand); }
+  details.plain summary { cursor: pointer; font-weight: 650; font-size: 13.5px; color: var(--leaf-dark); }
+  details.plain ul { margin: 10px 0 4px; padding-left: 18px; font-size: 13px; }
+  details.plain li { margin-bottom: 8px; }
+  details.plain li::marker { color: var(--leaf); }
+
   .note { font-size: 13px; color: var(--ink-2); }
   .warn { border-left: 3px solid var(--alert); padding-left: 10px; }
   footer { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 13px; color: var(--ink-2); }
@@ -238,6 +283,7 @@
         <button id="en" aria-pressed="true">EN</button>
       </div>
     </div>
+    <p class="note" id="irr-hint" aria-live="polite"></p>
   </header>
 
   <main>
@@ -324,6 +370,10 @@
     <h2 id="h-table">Mvua na hatua za kilimo</h2>
     <div id="table"><div class="state">Inapakia&hellip;</div></div>
     <p class="note" id="table-note" style="margin-top:10px"></p>
+    <details id="howto-read">
+      <summary id="howto-read-sum">How to read this table</summary>
+      <div id="howto-read-body"></div>
+    </details>
   </section>
 
   <section class="card" style="margin-top:20px">
@@ -378,7 +428,7 @@
 const T = {
   sw: {
     tagline: 'Utabiri wa msimu → hatua ya kilimo',
-    county: 'Kaunti', ward: 'Kata', irrigation: 'Umwagiliaji',
+    county: 'Kaunti', ward: 'Kata', irrigation: 'Nina umwagiliaji',
     map: 'Ramani ya kaunti',
     mapNote: (s, el, wb) => `${s.name}, ${s.sub_county}: ${el} m juu ya bahari. Mvua ya mwaka ni ${wb}% ya mahitaji ya mimea.`,
     mapNoteCounty: (name, n) => `Kata ${n} za ${name}: rangi inaonyesha hali ya mvua ya mwezi unaofuata unaotegemewa. Bofya kata kusoma ushauri.`,
@@ -391,7 +441,7 @@ const T = {
     wardAttrib: 'Mipaka ya kata: geoBoundaries (CC BY 4.0)',
     now: 'Kipindi kinachofuata', stripKey: 'Urefu wa mstari = mvua inayotarajiwa · dashi = wastani wa miaka 20', tableH: 'Mvua na hatua za kilimo', table: (n) => `Miezi ${n} ijayo: mvua inayotarajiwa dhidi ya kawaida ya 2005-2024 kwa wadi hii (ECMWF SEAS5 kupitia Open-Meteo). Hatua za kilimo ni kanuni, si makisio.`,
     advice: 'Ushauri', loading: 'Inapakia…',
-    cols: ['Mwezi', 'Mvua inayotarajiwa', 'Kawaida (2005-2024)', 'Hali', 'Uhakika', 'Kilimo: cha kufanya'],
+    cols: ['Mwezi', 'Mvua inayotarajiwa', 'Kawaida (2005-2024)', 'Hali', 'Uhakika', 'Maana ya namba, na cha kufanya'],
     tercile: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', unknown: 'hakuna taarifa' },
     conf: { high: 'juu', medium: 'wastani', low: 'chini', none: ' - ' },
     act: {
@@ -402,6 +452,22 @@ const T = {
       low: 'Ishara dhaifu: panga kwa hali ya kawaida, kagua tena mwezi ukikaribia.',
       partial: 'Data haijakamilika: makadirio ya awali tu; hukumu kamili mwezi ukikamilika.',
     },
+    factPartial: (c, e) => `Dirisha la utabiri linafunika siku ${c} kati ya ${e} za mwezi huu, hivyo jumla haijakamilika - miezi isiyo kamili haiainishwa kamwe.`,
+    factBelow: (f, med, d, pct) => `Mvua inayotarajiwa mm ${f} ni takriban ${pct}% ya kawaida ya mm ${med} - takriban mm ${d} chani kwa mwezi mzima (mm 1 = lita 1 kwa kila m2).`,
+    factNear: (f, med, pct) => `Mvua inayotarajiwa mm ${f} ni takriban ${pct}% ya kawaida ya mm ${med} - ndani ya theluthi ya kati ya rekodi ya 2005-2024 kwa mwezi huu.`,
+    factAbove: (f, med, s, pct) => `Mvua inayotarajiwa mm ${f} ni takriban ${pct}% ya kawaida ya mm ${med} - takriban mm ${s} ya ziada (mm 1 = lita 1 kwa kila m2).`,
+    factExtreme: (f, med, s, x) => `Mvua inayotarajiwa mm ${f} ni mara ${x} ya kawaida ya mm ${med} kwa mwezi huu - ishara kali ya mvua nyingi (mm ${s} ya ziada; mm 1 = lita 1 kwa kila m2).`,
+    readTitle: 'Jinsi ya kusoma jedwali hili - ukweli nyuma ya kila namba',
+    read: [
+      '<strong>Namba zinatoka wapi:</strong> Utabiri ni ECMWF SEAS5, mfano wa hali ya hewa wa msimu wa Ulaya, unaopatikana kupitia Open-Meteo (bila malipo, bila API key). "Mvua ya kawaida" ni rekodi ya ERA5 ya 2005-2024 kwa seli ya hali ya hewa ya kata hii yenyewe - si wastani wa kitaifa.',
+      '<strong>Hali (chini / kawaida / juu ya kawaida):</strong> Miaka 20 iliyorekodiwa kwa kila mwezi wa kalenda hupangwa kutoka mkavu hadi mvua nyingi. Theluthi ya miaka mikavu ni "chini ya kawaida", thuluthi ya kati ni "kawaida", thuluthi ya mvua nyingi ni "juu ya kawaida". Jumla ya utabiri huwekwa kwenye ngazi hiyo. Mstari wa dashi kwenye kila bara ni wastani wa miaka 20.',
+      '<strong>Uhakika:</strong> uhakika hupima nguvu ya msingi wa data, si utabiri: mwezi ulioainishwa dhidi ya rekodi kamili ya miaka 20 husomwa "juu" (miaka 15+), rekodi ndogo husomwa "wastani" (8+) au "chini" (3+). Banda zimejaribiwa kwa kuondoa mwaka mmoja kwa wakati kwenye seli ya majaribio - kujenga upya banda za kila mwaka kutoka miaka mingine 19 kulikubaliana kwa month-years zote 240.',
+      '<strong>mm 1 = lita 1 kwa kila m2:</strong> "mm 40" inamaanisha lita 40 za mvua kwenye kila mita ya mraba ya kata, zilisambaa kwa mwezi mzima.',
+      '<strong>(partial siku x/y):</strong> dirisha la utabiri halijafunika kila siku ya mwezi huo bado - ama mwezi ulishaanza (siku zilizopita hazimo kwenye dirisha) au upo mwisho wa dirisha. Miezi isiyo kamili huonyesha jumla lakini haiainishwi kamwe; hukumu hutokea dirisha likifunika mwezi mzima.',
+      '<strong>Mipaka ya kweli:</strong> SEAS5 haijarekebishwa kwa upendeleo, na thamani zinaelezea seli ya mfano ya takriban km 25, si shamba moja - maelezo ya jedwali huonyesha wakati kata inatumia seli ya jirani. Hii ni picha ya eneo ya kupanga nayo, si hakikisho.',
+    ],
+    irrHintOff: 'Kwa mvua tu (chaguo-msingi): mapendekezo yanajumuisha tu mimea inayostahimili mvua pekee; mimea inayohitaji umwagiliaji huachwa nje.',
+    irrHintOn: 'Kwa umwagiliaji: unaweza kumwagilia mwenyewe, hivyo mimea inayohitaji umwagiliaji hujiunga na mapendekezo ikiwa na lebo "kwa umwagiliaji tu".',
     partial: 'haijakamilika',
     noData: 'Hakuna taarifa ya kutegemewa kwa kipendi hiki.',
     src: 'Chanzo: ECMWF SEAS5 kupitia Open-Meteo (hakuna API key, hakuna gharama), ukilinganishwa na ERA5 2005-2024.',
@@ -411,7 +477,7 @@ const T = {
   },
   en: {
     tagline: 'Seasonal forecast → farming decision',
-    county: 'County', ward: 'Ward', irrigation: 'Irrigation',
+    county: 'County', ward: 'Ward', irrigation: 'I have irrigation',
     map: 'County map',
     mapNote: (s, el, wb) => `${s.name}, ${s.sub_county}: ${el} m elevation. Annual rainfall is ${wb}% of crop water demand.`,
     mapNoteCounty: (name, n) => `${n} wards of ${name}: colour shows the next usable month's rainfall outlook. Click a ward to read its advisory.`,
@@ -424,7 +490,7 @@ const T = {
     wardAttrib: 'Ward boundaries: geoBoundaries (CC BY 4.0)',
     now: 'Next usable month', stripKey: 'Bar height = rain expected · dashed line = 20-year median', tableH: 'Rain and farming actions', table: (n) => `Next ${n} months: rain expected vs the 2005-2024 usual for this ward (ECMWF SEAS5 via Open-Meteo). The farming actions are rules, not guesses.`,
     advice: 'Advisory', loading: 'Loading…',
-    cols: ['Month', 'Rain expected', 'Usual rain (2005-2024)', 'Outlook', 'How sure', 'What to do - farming'],
+    cols: ['Month', 'Rain expected', 'Usual rain (2005-2024)', 'Outlook', 'How sure', 'What the numbers mean, and what to do'],
     tercile: { above: 'above normal', near: 'near normal', below: 'below normal', unknown: 'unknown' },
     conf: { high: 'high', medium: 'medium', low: 'low', none: ' - ' },
     act: {
@@ -435,6 +501,22 @@ const T = {
       low: 'Weak signal: plan for normal conditions and re-check closer to the month.',
       partial: 'Partial month data: indicative only; the verdict comes when the month is complete.',
     },
+    factPartial: (c, e) => `The forecast window covers only ${c} of this month's ${e} days, so the total is incomplete - partial months are never classified.`,
+    factBelow: (f, med, d, pct) => `${f} mm expected is about ${pct}% of the ${med} mm usual - roughly ${d} mm less rain over the whole month (1 mm = 1 litre per m2).`,
+    factNear: (f, med, pct) => `${f} mm expected is about ${pct}% of the ${med} mm usual - inside the middle third of the 2005-2024 record for this month.`,
+    factAbove: (f, med, s, pct) => `${f} mm expected is about ${pct}% of the ${med} mm usual - roughly ${s} mm extra rain (1 mm = 1 litre per m2).`,
+    factExtreme: (f, med, s, x) => `${f} mm expected is ${x} times the ${med} mm usual for this month - an extreme wet signal (${s} mm extra; 1 mm = 1 litre per m2).`,
+    readTitle: 'How to read this table - the facts behind every number',
+    read: [
+      '<strong>Where the numbers come from:</strong> the forecast is ECMWF SEAS5, Europe\'s seasonal climate model, fetched through Open-Meteo (free, no API key). "Usual rain" is the 2005-2024 ERA5 record for this ward\'s own climate cell - not a national average.',
+      '<strong>Outlook (below / near / above normal):</strong> the 20 recorded years for each calendar month are sorted driest to wettest. The driest third of years is "below normal", the middle third "near normal", the wettest third "above normal". The forecast total is placed on that ladder. The dashed line on every bar is the 20-year median.',
+      '<strong>How sure:</strong> confidence grades the baseline, not the forecast: a month classified against the full 20-year record reads "high" (15+ years), a thinner record reads "medium" (8+) or "low" (3+). The bands were leave-one-out tested on the pilot cell - rebuilding each year\'s bands from the other 19 years agreed on all 240 month-years.',
+      '<strong>1 mm = 1 litre per m2:</strong> "40 mm" means 40 litres of rain on every square metre of the ward, spread over the whole month.',
+      '<strong>(partial x/y days):</strong> the fetched forecast window does not cover every day of that month yet - either the month already started (its past days are outside the window) or it sits at the window\'s far edge. Partial months show totals but are never classified; the verdict appears when the window covers the full month.',
+      '<strong>Honest limits:</strong> SEAS5 is not bias-corrected, and values describe the roughly 25 km model cell, not one field - the table note says when a ward borrows a neighbouring cell. This is an area outlook to plan with, never a guarantee.',
+    ],
+    irrHintOff: 'Rainfed (default): recommendations only include crops that can survive on rain alone; crops that need irrigation are left out.',
+    irrHintOn: 'Irrigated: you can water crops yourself, so crops that need irrigation join the recommendations, labelled "irrigation only".',
     partial: 'partial',
     noData: 'No usable outlook for this period.',
     src: 'Source: ECMWF SEAS5 via Open-Meteo (no API key, no cost), against an ERA5 2005-2024 baseline.',
@@ -581,7 +663,16 @@ function applyStrings(t) {
   $('h-advice').textContent = t.advice;
   $('src').textContent = t.src;
   $('caveat').textContent = t.caveat;
+  $('howto-read-sum').textContent = t.readTitle;
+  $('howto-read-body').innerHTML = `<ul>${t.read.map((x) => `<li>${x}</li>`).join('')}</ul>`;
+  updateIrrHint();
   $('howto').innerHTML = t.howto;
+}
+
+/** The always-visible one-liner that says what the irrigation switch changes. */
+function updateIrrHint() {
+  const t = T[lang];
+  $('irr-hint').textContent = $('irr').checked ? t.irrHintOn : t.irrHintOff;
 }
 
 function chip(tercile, t) {
@@ -619,6 +710,28 @@ function actionFor(m, t) {
   return t.act[m.tercile] ?? t.act.unknown;
 }
 
+/**
+ * The fact sentence: what the row's numbers actually mean, computed from the
+ * row itself (percent of the 20-year usual, litres per square metre, extreme
+ * multiples, day coverage) so the explanation can never drift from the data.
+ * The rules answer "what to do"; this answers "what am I looking at".
+ */
+function factFor(m, t) {
+  if (!m.complete) return t.factPartial(m.days_covered ?? '?', m.days_expected ?? '?');
+  const f = m.forecast_mm;
+  const med = m.median_mm;
+  if (!Number.isFinite(f) || !Number.isFinite(med) || med <= 0) return '';
+  const pct = Math.round((f / med) * 100);
+  if (m.tercile === 'below') return t.factBelow(f, med, Math.round(med - f), pct);
+  if (m.tercile === 'above') {
+    return pct >= 200
+      ? t.factExtreme(f, med, Math.round(f - med), (f / med).toFixed(1))
+      : t.factAbove(f, med, Math.round(f - med), pct);
+  }
+  if (m.tercile === 'near') return t.factNear(f, med, pct);
+  return '';
+}
+
 function renderTable(months, t) {
   const host = $('table');
   if (!months?.length) { host.innerHTML = `<div class="state">${t.noData}</div>`; return; }
@@ -628,6 +741,7 @@ function renderTable(months, t) {
     const mw = Math.round(((m.median_mm ?? 0) / max) * 100);
     const vsPct = m.median_mm ? Math.round(((m.forecast_mm - m.median_mm) / m.median_mm) * 100) : null;
     const vsTxt = vsPct === null ? '' : ` <span style="color:${vsPct >= 0 ? '#2e7d32' : '#b23c17'};font-weight:650">${vsPct >= 0 ? '+' : ''}${vsPct}%</span>`;
+    const fact = factFor(m, t);
     return `<tr>
       <td style="text-align:left">${fmtMonthKey(m.month)}${m.complete ? '' : ` <span class="partial">(${t.partial} ${m.days_covered ?? '?'}/${m.days_expected ?? '?'})</span>`}</td>
       <td>${m.forecast_mm ?? ' - '} mm</td>
@@ -637,7 +751,7 @@ function renderTable(months, t) {
         <span style="color:${TER_TEXT[m.tercile] ?? TER_TEXT.unknown};font-weight:650;white-space:nowrap">${t.tercile[m.tercile] ?? m.tercile}</span>
       </div></td>
       <td style="text-align:left">${t.conf[m.confidence] ?? m.confidence}</td>
-      <td style="text-align:left;font-size:12.5px;line-height:1.45">${actionFor(m, t)}</td>
+      <td style="text-align:left;font-size:12.5px;line-height:1.45">${fact ? fact + ' ' : ''}${actionFor(m, t)}</td>
     </tr>`;
   }).join('');
   host.innerHTML = `<table><caption class="note" style="caption-side:top;text-align:left;padding-bottom:6px">${t.table(months.length)}</caption>
@@ -885,7 +999,7 @@ $('ward').addEventListener('change', () => {
   load();
   if (lastFood) doFood();
 });
-$('irr').addEventListener('change', load);
+$('irr').addEventListener('change', () => { updateIrrHint(); load(); });
 
 loadCounties().then(refresh);
 </script>
@@ -975,9 +1089,45 @@ const PT = {
     satOsmVisionSplit: (o, v) => `Data ya OpenStreetMap: ${o} (tumia hii). Satelaiti ilisema ${v} - makadirio tu; data ya uchunguzi inashinda.`,
     foodVerify: 'Na nani kuthibitisha mpango huu',
     foodNeed: 'Chagua kata au weka latitudo na longitudo kwanza.',
-    foodCrops: 'Mimea ya kupanda na miezi ya kuvuna',
-    foodCrop: 'Zao', foodPlant: 'Panda ifikapo', foodHarvest: 'Vuna',
     foodSources: 'Vyanzo za namba hizi',
+    foodStance: {
+      prepare_now: 'Jiandae sasa: miezi kadhaa ya mvua chini ya kawaida inakuja.',
+      caution: 'Tahadhari: baadhi ya miezi itakuwa chini ya kawaida.',
+      good_season: 'Msimu mzuri: hakuna mwezi chini ya kawaida katika utabiri.',
+    },
+    foodStanceEv: (n, tot) => `Ushahidi: miezi ${n} kati ya ${tot} ya utabiri iko chini ya kawaida.`,
+    foodLeanTitle: 'Wakati chakula na maji hupungua',
+    foodLeanCap: (count, streak) => `Mvua haifiki mahitaji ya maji ya mimea miezi ${count} kati ya 12 hapa (rekodi ya ERA5 2005-2024); mkondo mrefu zaidi wa uhaba ni miezi ${streak} mfululizo. Kahawia = mwezi wa uhaba.`,
+    foodLeanTercileCap: 'Hakuna rekodi ya miaka 20 kwa nukta hii, hivyo kalenda inaonyesha miezi ya utabiri tu: kahawia = mvua chini ya kawaida inatarajiwa; kijivu = mwezi haujakamilika.',
+    foodPlantTitle: 'Cha kupanda, na lini',
+    foodWindowFact: (month, n, thresh) => `Dirisha la kupanda: kuanzia ${month}, miezi ${n} inatarajiwa kushikilia mm ${thresh} au zaidi - kina cha mvua kinachopita kanuni ya FAO ya nusu-ET0 kwa seli hii. Kila zao hapo chini linaiva ndani ya dirisha hilo.`,
+    foodNoneFit: 'Hakuna zao kuu linalofaa dirisha hili na kustahimili ukame unaotarajiwa. Njia mbadala ni kupanda kwenye mifuko na vikapu - angalia kadi ya bustani ya jikoni. Tangi la kuhifadhi maji na hatua za miezi ya uhaba ziko hapo chini.',
+    foodNoWindow: 'Hakuna mwezi katika utabiri unaofikia kizingiti cha kupanda. Usipande zao la shambani kwa tumaini la mvua; pita kwa akiba iliyopo, kupanda kwenye vikapu, na hatua za miezi ya uhaba hapo chini.',
+    foodCols: ['Zao', 'Ustahimilivu ukame', 'Upevukaji (siku)', 'Panda ifikapo', 'Vuna'],
+    foodTol: { very_high: 'juu sana', high: 'juu', medium: 'wastani', low: 'chini' },
+    foodSkipTitle: 'Yaliyoachwa, na sababu',
+    foodSkipReason: {
+      water_balance: (pct) => `mahindi ya mvua pekee ni kamari hapa - uwiano wa maji wa mwaka ni ${pct}% tu ya mahitaji ya mimea (kizingiti 60%)`,
+      irrigation_only: 'linahitaji umwagiliaji; mpango huu unategemea mvua tu',
+      drought_risk: 'haustahimili ukame wa kutosha kwa msimu unaotarajiwa',
+      maturity_too_long: (days) => `hauivi ndani ya dirisha la mvua la siku ${days}`,
+    },
+    foodWaterTitle: 'Maji: paa linavuna kiasi gani dhidi ya kiasi cha kunywa',
+    foodWaterLegend: (cat, lppd) => `Mstari wa juu (bluu) = mvua iliyovunwa mwezi huo: mm inayotarajiwa x eneo la paa x lita ${cat} kwa kila mm kwa kila m2. Mstari wa chini (kijivu) = mahitaji ya kunywa: watu x lita ${lppd} kwa mtu kwa siku x siku za mwezi. Kulia = pengo (-) au ziada (+) ya mwezi.`,
+    foodTankLabel: 'hifadhi ya maji inayopendekezwa',
+    foodTankNone: 'Katika utabiri wote, paa linavuna angalau kiasi cha kunywa cha nyumba: hakuna pengo la hifadhi. Chombo kidogo kilichofunikwa bado ni busara kwa majuma ya ukame kati ya mvua - na hii haihesabu kupika, kuosha au mifugo.',
+    foodTankWhyRoof: (ppl, lppd, roof, cat, raw, month) => `Jinsi ilivyopatikana: mahitaji = watu ${ppl} x lita ${lppd}/siku x siku za mwezi; ugavi = mvua inayotarajiwa x m2 ${roof} x ${cat}. Miezi ya upungufu hujilimbikiza mpaka mwezi wa ziada unapojaza tangi; upungufu mkubwa zaidi wa jumla (ufikao ${month}) ni lita ${raw}, ikazungushwa juu hadi lita 100 ya karibu inayouzwa dukani.`,
+    foodTankWhyBought: (ppl, lppd, raw, month) => `Hakuna paa linalovuna maji, hivyo hakuna mwezi wa kujaza tangi: hifadhi = mahitaji ya kunywa ya mwezi mmoja mubaya zaidi (lita ${raw}, ukifikia ${month}; watu ${ppl} x lita ${lppd}/siku x siku), ikazungushwa juu hadi lita 100 ya karibu.`,
+    foodPlainTitle: 'Toleo la maandishi tu (ndilo linalotumwa kwa USSD)',
+    foodHowTitle: 'Jinsi mpango huu unavyokokotolewa - kila kanuni na chanzo chake',
+    foodHow: [
+      '<strong>Mvua inayotarajiwa kwa mwezi:</strong> mpango hautumii utabiri mbichi. Mwezi uliotabiriwa chini ya kawaida hupangwa kwa p33 ya miaka 20 (mwezi wa mwaka mkavu), juu ya kawaida kwa p67, vinginevyo wastani - hivyo mpango husimama hata utabiri ukikosea kuelekea upande ambao unajitangaza mwenyewe.',
+      '<strong>Miezi ya uhaba:</strong> mwezi ni wa uhaba ambapo wastani wa mvua ya 2005-2024 uko chini ya wastani wa mahitaji ya maji ya mimea (ET0) kwa mwezi huo. Nukta bila rekodi ya miaka 20 hupunguzwa kwa uaminifu hadi "miezi ya utabiri chini ya kawaida" na kusema hivyo wazi.',
+      '<strong>Kizingiti cha kupanda:</strong> tathmini ya FAO ya AEZ Kenya huanza kipandi cha kulima maji yanapofika nusu ya ET0, hivyo mwezi huhesabika kupandika kwa 0.5 x ET0 (chini kabisa mm 30). Mm 35 dhidi ya ET0 mm 170 huchipua zao kisha kuliua - ndiyo maana kizingiti si mm 30 tu.',
+      '<strong>Vipindi vya upevukaji:</strong> kutoka orodha rasmi ya aina za KEPHIS na nyaraka za KALRO; zao huingia kwenye mpango tu ikiwa upevukaji wake mrefu zaidi unatosha ndani ya dirisha la mvua. Mahindi hupimwa kwanza dhidi ya uwiano wa maji wa mwaka wa seli (kizingiti 60%).',
+      '<strong>Ukubwa wa tangi:</strong> 0.8 ya mvua kuteleza kwenye mabati laini x 0.9 baada ya kizuia mvua ya kwanza = lita 0.72 kwa mm kwa m2; kiasi cha kunywa ni kiwango cha chini cha kibinadamu cha Sphere cha lita 15 kwa mtu kwa siku. Ukubwa wa kawaida wa familia ni wa sensa ya KNBS 2019 kwa kaunti husika.',
+      '<strong>Kile ambacho mpango huu si:</strong> hakuna kanuni hii iliyopimwa kwenye paa lako au familia yako mwenyewe. Ni kanuni za kupanga zilizochapishwa na zenye vyanzo; mpango ni mwanzo wa kuthibitisha na ofisi zilizoorodheshwa hapo chini, si ahadi.',
+    ],
     err: 'Imeshindikana.',
   },
   en: {
@@ -1050,9 +1200,45 @@ const PT = {
     satOsmVisionSplit: (o, v) => `OpenStreetMap survey data: ${o} (use this). The satellite said ${v} - an estimate; survey data wins.`,
     foodVerify: 'Who to confirm this plan with',
     foodNeed: 'Select a ward or enter latitude and longitude first.',
-    foodCrops: 'Planting plan with harvest months',
-    foodCrop: 'Crop', foodPlant: 'Plant by', foodHarvest: 'Harvest',
     foodSources: 'Sources behind these numbers',
+    foodStance: {
+      prepare_now: 'Prepare now: several below-normal months are coming.',
+      caution: 'Caution: some months will be below normal.',
+      good_season: 'Good season ahead: no below-normal months in the outlook.',
+    },
+    foodStanceEv: (n, tot) => `Evidence: ${n} of ${tot} outlook months classified below normal.`,
+    foodLeanTitle: 'When food and water get tight',
+    foodLeanCap: (count, streak) => `Rain falls short of crop water demand in ${count} of 12 months here (ERA5 2005-2024 normals); the longest lean run is ${streak} consecutive months. Brown = lean month.`,
+    foodLeanTercileCap: 'No 20-year normals at this exact point, so the calendar shows the outlook months only: brown = below-normal rain expected; grey = month incomplete.',
+    foodPlantTitle: 'What to plant, and when',
+    foodWindowFact: (month, n, thresh) => `Planting window: from ${month}, ${n} month(s) expected to hold at or above ${thresh} mm - the rain depth that passes FAO's half-ET0 rule for this cell. Every crop below matures inside that window.`,
+    foodNoneFit: 'No staple in the pack both fits this window and survives the expected dryness. The fallback is container growing - see the kitchen garden card. Water storage and the lean-month actions below still apply.',
+    foodNoWindow: 'No month in the outlook reaches the planting threshold. Do not plant a field crop on rain hope; bridge with stored food, containers and the lean-month actions below.',
+    foodCols: ['Crop', 'Drought tolerance', 'Maturity (days)', 'Plant by', 'Harvest'],
+    foodTol: { very_high: 'very high', high: 'high', medium: 'medium', low: 'low' },
+    foodSkipTitle: 'Left out, and why',
+    foodSkipReason: {
+      water_balance: (pct) => `rainfed maize is a gamble here - the annual water balance is ${pct}% of crop demand (60% floor)`,
+      irrigation_only: 'needs irrigation; this plan assumes rain only',
+      drought_risk: 'not drought-hardy enough for the expected season',
+      maturity_too_long: (days) => `cannot mature inside the ${days}-day wet window`,
+    },
+    foodWaterTitle: 'Water: what the roof catches vs what the household drinks',
+    foodWaterLegend: (cat, lppd) => `Top bar (blue) = rain harvested that month: expected mm x roof area x ${cat} L per mm per m2. Bottom bar (grey) = drinking demand: people x ${lppd} L per person per day x days in the month. Right = that month's gap (-) or surplus (+).`,
+    foodTankLabel: 'recommended water storage',
+    foodTankNone: 'Across the whole outlook the roof catches at least as much as the household drinks: no storage gap. A small covered container is still sensible for dry weeks between rains - and this counts drinking only, not cooking, washing or livestock.',
+    foodTankWhyRoof: (ppl, lppd, roof, cat, raw, month) => `Derivation: demand = ${ppl} people x ${lppd} L/day x days in month; supply = expected rain x ${roof} m2 x ${cat}. Deficit months stack up until a surplus month refills the tank; the deepest cumulative shortfall (reached ${month}) is ${raw} L, rounded up to the nearest 100 L a shop sells.`,
+    foodTankWhyBought: (ppl, lppd, raw, month) => `No harvestable roof, so there is no refill month to wait for: storage = the worst single month's drinking demand (${raw} L, reached ${month}; ${ppl} people x ${lppd} L/day x days), rounded up to the nearest 100 L.`,
+    foodPlainTitle: 'Plain-text version (what a basic phone gets on USSD)',
+    foodHowTitle: 'How this plan is calculated - every rule and its source',
+    foodHow: [
+      '<strong>Expected rain per month:</strong> the plan never uses the raw forecast. A month classified below normal is planned at the 20-year p33 (a dry year\'s month), above normal at p67, otherwise the median - so the plan still stands when the forecast is wrong in the direction it itself declares.',
+      '<strong>Lean months:</strong> a month is lean where the 2005-2024 median rain is below the median crop water demand (ET0) for that month. Points without 20-year normals honestly degrade to "below-normal forecast months" and say so.',
+      '<strong>Planting gate:</strong> FAO\'s Kenya AEZ assessment starts the growing period when moisture supply reaches half of ET0, so a month counts as plantable at 0.5 x ET0 (floor 30 mm). 35 mm against 170 mm of ET0 germinates a crop and then kills it - that is why the gate is not simply 30 mm.',
+      '<strong>Maturity windows:</strong> from the KEPHIS national variety list and KALRO packs; a crop only makes the plan if its longest maturity fits inside the wet run. Maize is judged first against the cell\'s annual water balance (60% floor).',
+      '<strong>Tank size:</strong> 0.8 runoff on smooth iron sheet x 0.9 after the first-flush diverter = 0.72 L per mm per m2; the drinking allowance is the Sphere humanitarian minimum of 15 L per person per day. The default household size is the KNBS 2019 census mean for the county.',
+      '<strong>What this plan is not:</strong> none of these coefficients was measured on your own roof or family. They are documented, sourced planning rules; the plan is a starting point to confirm with the offices listed below, never a promise.',
+    ],
     err: 'Failed.',
   },
 };
@@ -1280,17 +1466,127 @@ async function doSkill() {
   }
 }
 
+/**
+ * The food plan renders as a visual document, not a bullet list: verdict
+ * banner first, then the lean calendar, the gated planting table with every
+ * exclusion explained, and the month-by-month water budget that derives the
+ * tank size in public. Every number on screen comes straight out of the
+ * /food-security payload - this function invents nothing and hides nothing.
+ */
 function renderFood(d) {
   const t = pt();
   if (!foodPeopleDirty && Number.isFinite(d?.inputs?.people)) $('fpeople').value = d.inputs.people;
   $('bshare').hidden = false;
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const name = (p) => (lang === 'en' || !p.sw || p.sw === p.en ? p.en : `${p.sw} (${p.en})`);
+  const nf = (n) => Number(n ?? 0).toLocaleString('en-US');
+  const mon = MON[lang] ?? MON.en;
+  const mlabel = (k) => {
+    const m = /^(\d{4})-(\d{2})$/.exec(String(k ?? ''));
+    return m ? `${mon[Number(m[2]) - 1]} '${m[1].slice(2)}` : String(k ?? '');
+  };
+
+  // 1. Verdict first: coloured stance banner with the count behind it.
+  const complete = (d.outlook ?? []).filter((r) => r.complete).length;
+  const stance = `<div class="stance ${esc(String(d.stance ?? 'unknown'))}" id="food-stance">
+      <span>${esc(t.foodStance[d.stance] ?? d.stance ?? '')}</span>
+      <em>${esc(t.foodStanceEv(d.below_months ?? 0, complete))}</em>
+    </div>`;
+
+  // 2. Lean calendar: wards get the full 12-month rain-vs-ET0 analysis; points
+  //    without normals get the honest tercile-only outlook strip instead.
+  const normals = d.lean?.basis === 'rain_vs_et0_normals';
+  const leanSet = new Set(d.lean?.months ?? []);
+  let calCells = '';
+  let calCap = '';
+  let nCols = 12;
+  if (normals) {
+    calCells = Array.from({ length: 12 }, (_, i) => `<div class="${leanSet.has(i + 1) ? 'dry' : 'wet'}">${esc(mon[i])}</div>`).join('');
+    calCap = t.foodLeanCap(d.lean.deficit_count ?? 0, d.lean.longest_streak ?? 0);
+  } else if ((d.outlook ?? []).length) {
+    nCols = d.outlook.length;
+    calCells = d.outlook.map((r) => {
+      const cm = Number(String(r.month).slice(5, 7));
+      const cls = !r.complete ? 'unk' : r.tercile === 'below' ? 'dry' : 'wet';
+      return `<div class="${cls}">${esc(mon[cm - 1] ?? cm)}</div>`;
+    }).join('');
+    calCap = t.foodLeanTercileCap;
+  }
+  const calendar = calCells
+    ? `<h3>${esc(t.foodLeanTitle)}</h3>
+    <div class="lean-cal" style="grid-template-columns:repeat(${nCols},1fr)">${calCells}</div>
+    <p class="note">${esc(calCap)}</p>`
+    : '';
+
+  // 3. Planting plan: the window states its own gate, the table shows why each
+  //    crop qualified, and every exclusion carries its named reason.
+  const p = d.planting ?? {};
+  const win = p.window;
+  let plant;
+  if (win) {
+    const cropRows = (p.plant ?? [])
+      .map((c) => `<tr><td>${esc(name(c))}</td><td>${esc(t.foodTol[c.drought_tolerance] ?? c.drought_tolerance)}</td>
+        <td>${esc((c.maturity_days ?? []).join('-'))}</td><td>${esc(fmtMonthKey(c.plant_by))}</td><td>${esc(fmtMonthKey(c.harvest))}</td></tr>`)
+      .join('');
+    plant = `<h3>${esc(t.foodPlantTitle)}</h3>
+      <p class="note">${esc(t.foodWindowFact(fmtMonthKey(win.start), win.months, nf(win.threshold_mm)))}</p>
+      ${cropRows ? `<table><thead><tr>${t.foodCols.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${cropRows}</tbody></table>` : `<p class="note">${esc(t.foodNoneFit)}</p>`}`;
+  } else {
+    plant = `<h3>${esc(t.foodPlantTitle)}</h3><p class="note">${esc(t.foodNoWindow)}</p>`;
+  }
+  const skipItems = (p.skip ?? []).slice(0, 8).map((s) => {
+    let why;
+    if (s.reason === 'water_balance') why = t.foodSkipReason.water_balance(Number.isFinite(d.water_balance_pct) ? d.water_balance_pct : '?');
+    else if (s.reason === 'maturity_too_long') why = t.foodSkipReason.maturity_too_long(p.wet_days ?? '?');
+    else why = t.foodSkipReason[s.reason] ?? s.reason;
+    return `<li><strong>${esc(name(s))}</strong> - ${esc(why)}</li>`;
+  }).join('');
+  const skips = skipItems ? `<p class="note"><strong>${esc(t.foodSkipTitle)}</strong></p><ul class="skips">${skipItems}</ul>` : '';
+
+  // 4. Water budget: supply vs demand bars per month from the payload's own
+  //    numbers, then the tank card that shows its derivation in public.
+  const w = d.water;
+  let water = '';
+  if (w?.monthly?.length) {
+    // Display-only rounding: 0.8 x 0.9 arrives as 0.7200000000000001, and the
+    // derivation text must read like the arithmetic it explains.
+    const cat = Number(w.litres_per_mm_per_m2).toFixed(2);
+    const maxL = Math.max(...w.monthly.map((wm) => Math.max(wm.supply_l, wm.demand_l)), 1);
+    const wrows = w.monthly.map((wm) => {
+      const supW = Math.round((wm.supply_l / maxL) * 100);
+      const demW = Math.round((wm.demand_l / maxL) * 100);
+      const gap = wm.deficit_l > 0;
+      const net = Math.abs(wm.supply_l - wm.demand_l);
+      const aria = `${fmtMonthKey(wm.month)}: supply ${wm.supply_l} L, demand ${wm.demand_l} L, ${gap ? 'gap' : 'surplus'} ${net} L`;
+      return `<div class="wrow"><b>${esc(mlabel(wm.month))}</b>
+        <div class="wtrack" role="img" aria-label="${esc(aria)}">
+          <span class="sup" style="width:${supW}%"></span>
+          <span class="dem" style="width:${demW}%"></span>
+        </div>
+        <em class="${gap ? 'gap' : 'ok'}">${gap ? '-' : '+'}${nf(net)} L</em>
+      </div>`;
+    }).join('');
+    const b = w.tank_basis ?? {};
+    let tank;
+    if (w.tank_litres > 0) {
+      const why = w.roof_m2 > 0
+        ? t.foodTankWhyRoof(w.people, w.drinking_l_per_person_day, w.roof_m2, cat, nf(b.litres_raw), fmtMonthKey(b.worst_month))
+        : t.foodTankWhyBought(w.people, w.drinking_l_per_person_day, nf(b.litres_raw), fmtMonthKey(b.worst_month));
+      tank = `<div class="tankcard"><span class="big">${nf(w.tank_litres)} L</span> ${esc(t.foodTankLabel)}
+        <p class="why">${esc(why)}</p></div>`;
+    } else {
+      tank = `<p class="note">${esc(t.foodTankNone)}</p>`;
+    }
+    water = `<h3>${esc(t.foodWaterTitle)}</h3>
+      <p class="note">${esc(t.foodWaterLegend(cat, w.drinking_l_per_person_day))}</p>
+      <div class="wbud">${wrows}</div>
+      ${tank}`;
+  }
+
+  // 5. The USSD text, the calculation dossier, sources, verification desk,
+  //    caveat - the plain lines stay one tap away because they ARE the product
+  //    a basic phone receives.
   const lines = (d.lines ?? []).map((l) => `<li>${esc(l)}</li>`).join('');
-  const fmtMonth = fmtMonthKey;
-  const cropRows = (d.planting?.plant ?? [])
-    .map((p) => `<tr><td>${esc(name(p))}</td><td>${esc(fmtMonth(p.plant_by))}</td><td>${esc(fmtMonth(p.harvest))}</td></tr>`)
-    .join('');
   const srcs = (d.sources ?? [])
     .map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`)
     .join('');
@@ -1301,10 +1597,12 @@ function renderFood(d) {
     )
     .join('');
   $('food-result').innerHTML = `
-    <ul>${lines || '<li>-</li>'}</ul>
-    ${cropRows ? `<p><strong>${esc(t.foodCrops)}</strong></p>
-    <table><thead><tr><th>${esc(t.foodCrop)}</th><th>${esc(t.foodPlant)}</th><th>${esc(t.foodHarvest)}</th></tr></thead>
-    <tbody>${cropRows}</tbody></table>` : ''}
+    ${stance}
+    ${calendar}
+    ${plant}${skips}
+    ${water}
+    <details class="plain"><summary>${esc(t.foodPlainTitle)}</summary><ul>${lines || '<li>-</li>'}</ul></details>
+    <details class="plain" id="food-how"><summary>${esc(t.foodHowTitle)}</summary><ul>${t.foodHow.map((x) => `<li>${x}</li>`).join('')}</ul></details>
     ${srcs ? `<p class="note"><strong>${esc(t.foodSources)}:</strong></p><ul class="note">${srcs}</ul>` : ''}
     ${verify ? `<p class="note"><strong>${esc(t.foodVerify)}:</strong></p><ul class="note">${verify}</ul>` : ''}
     <p class="warn">${esc(d.caveat ?? '')}</p>`;

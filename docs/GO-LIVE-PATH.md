@@ -34,7 +34,7 @@ Three channels, all live right now, no money, no keys:
 
 | Channel | Who uses it | Status |
 |---|---|---|
-| Web dashboard (msimu.shikunyi.workers.dev) | Extension officers, farmers with any smartphone browser on mobile data | LIVE, 115/115 automated checks |
+| Web dashboard (msimu.shikunyi.workers.dev) | Extension officers, farmers with any smartphone browser on mobile data | LIVE, 118/118 automated checks |
 | WhatsApp/SMS share button | Any farmer: officer builds the plan, shares it to a phone | LIVE (Web Share API + clipboard fallback) |
 | JSON API (14 routes) | Counties, NGOs, other apps building on top | LIVE |
 
