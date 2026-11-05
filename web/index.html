@@ -918,6 +918,7 @@ const PT = {
     satBtn: 'Kagua paa kwa satelaiti', satWorking: 'Inachukua picha ya satelaiti...', satNeedCoords: 'Tafuta eneo kwanza (au weka latitudo na longitudo), kisha jaribu satelaiti.',
     satFail: 'Satelaiti haipatikani kwa eneo hili sasa - tumia picha ya simu au chagua aina ya paa mwenyewe.',
     ipFallbackNote: 'GPS haipatikani (ndani ya jengo ni kawaida) - nimetumia makadirio ya mji kutoka kwa mtandao wako. Kagua na urekebishe latitudo na longitudo.',
+    geoBlockedNote: 'Ruhusa ya mahali imezuiwa kwenye kivinjari chako, kwa hivyo hii ni makadirio tu ya mji kutoka kwa mtandao wako - inaweza kukosa kwa kilomita kadhaa. Rekebisha: bofya ikoni ya mipangilio upande wa kushoto wa anwani ya tovuti, ruhusu Mahali, kisha bofya "Tumia GPS yangu" tena. Au tafuta eneo lako kwa jina hapa chini / bofya ramani kuweka pini mahali sawa.',
     surroundWorking: 'Ninaangalia kilichopo karibu nawe kwenye ramani...',
     surroundSuggested: (d, m) => `Pendekezo kutoka ramani (OpenStreetMap): ${d}${m ? `; paa: ${m}` : ''}. Thibitisha kwa macho, kisha jenga mpango.`,
     surroundNone: 'Hakuna majengo yaliyochorwa karibu hapa kwenye OpenStreetMap - jaza fomu hii mwenyewe.',
@@ -993,6 +994,7 @@ const PT = {
     satBtn: 'Check roof from satellite', satWorking: 'Capturing satellite view...', satNeedCoords: 'Find your location first (or enter coordinates), then try the satellite check.',
     satFail: 'Satellite check unavailable for this spot right now - use a phone photo or pick the roof material yourself.',
     ipFallbackNote: 'No GPS fix (common indoors) - used a city-level estimate from your internet connection. Check and correct the coordinates.',
+    geoBlockedNote: 'Location permission is BLOCKED in your browser, so this pin is only a city-level guess from your internet connection - it can be tens of kilometres off. Fix it: click the site-settings icon just left of the address bar, allow Location, then tap "Find my location" again. Or search your place by name below / click the map to drop your pin exactly where you stand.',
     surroundWorking: 'Checking what is mapped around this point...',
     surroundSuggested: (d, m) => `Map suggestion (OpenStreetMap): ${d}${m ? `; roof: ${m}` : ''}. Confirm with your eyes, then build the plan.`,
     surroundNone: 'Nothing is mapped around this point on OpenStreetMap - fill this form yourself.',
@@ -1312,7 +1314,7 @@ async function doFood() {
  * coordinates are filled in, the lookup runs, and the status line says plainly
  * that this is an estimate to correct by hand.
  */
-async function ipLocate(afterDenied) {
+async function ipLocate(denial) {
   const t = pt();
   $('point-status').textContent = t.geoWorking;
   try {
@@ -1322,9 +1324,19 @@ async function ipLocate(afterDenied) {
     $('plat').value = Number(j.latitude).toFixed(5);
     $('plon').value = Number(j.longitude).toFixed(5);
     await doLookup();
-    $('point-status').textContent = `${$('point-status').textContent} ${t.ipFallbackNote}`;
+    // A blocked permission deserves its own sentence up front: the estimate is
+    // not "indoors, close but fuzzy", it can be tens of kilometres off because
+    // it follows the ISP's exit point, not the person. Say how to fix it.
+    const note = denial === 'denied' ? t.geoBlockedNote : t.ipFallbackNote;
+    $('point-status').textContent = `${note} ${$('point-status').textContent}`;
+    // Correction must be one action away: focus the place-name search.
+    try {
+      $('psearch').focus({ preventScroll: true });
+    } catch {
+      $('psearch').focus();
+    }
   } catch {
-    $('point-status').textContent = afterDenied ? t.geoDenied : t.geoUnsupported;
+    $('point-status').textContent = denial ? t.geoDenied : t.geoUnsupported;
   }
 }
 
@@ -1341,8 +1353,10 @@ function doGeolocate() {
       $('plon').value = pos.coords.longitude.toFixed(5);
       doLookup(pos.coords.accuracy);
     },
-    () => {
-      ipLocate(true);
+    (err) => {
+      // code 1 = permission denied: a different problem from no-fix-indoors,
+      // with a different fix, so it gets a different message.
+      ipLocate(err?.code === 1 ? 'denied' : true);
     },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
   );
