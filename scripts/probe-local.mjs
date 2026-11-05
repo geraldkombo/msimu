@@ -64,6 +64,13 @@ try {
     const home = await fetch(`${base}/`);
     const homeBody = await home.text();
     check('GET / serves the dashboard', home.ok && homeBody.includes('<div id="map"'), `status ${home.status}, ${homeBody.length} B`);
+    const leafJs = await fetch(`${base}/vendor/leaflet/leaflet.js`);
+    const leafCss = await fetch(`${base}/vendor/leaflet/leaflet.css`);
+    check(
+      'dashboard serves its own Leaflet copy, no CDN at runtime',
+      leafJs.ok && leafCss.ok && homeBody.includes('/vendor/leaflet/') && !homeBody.includes('unpkg.com'),
+      `js ${leafJs.status}, css ${leafCss.status}`,
+    );
     check('dashboard has county and ward pickers', homeBody.includes('id="county"') && homeBody.includes('id="ward"'));
     check('dashboard loads the county list from the API', homeBody.includes("fetch('/counties')"));
     check('dashboard uses the county choropleth feed', /\/county-outlook\?county=/.test(homeBody));
@@ -164,6 +171,13 @@ try {
     });
     const ufb = await ussdFood.text();
     check('USSD option 4 returns the food and water plan', ussdFood.ok && /^END /.test(ufb.trim()) && /chakula|Food|mpango|plan/i.test(ufb), ufb.trim().slice(0, 50));
+    const ussdSack = await fetch(`${base}/ussd`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: 'ward=kajiado--nkaimurunya&text=5&lang=en',
+    });
+    const usb = await ussdSack.text();
+    check('USSD option 5 answers sack and container gardening', ussdSack.ok && /^END /.test(usb.trim()) && /sack|container/i.test(usb) && /wk \d/.test(usb), usb.trim().slice(0, 60));
     check('USSD food screen fits one screen', ufb.length <= 330, `${ufb.length} chars`);
 
     const health = await (await fetch(`${base}/health`)).json();
@@ -199,7 +213,7 @@ try {
     check('kitchen advice schedules watering from ET0', Boolean(kj?.watering?.detail) && kj.watering.basis === 'heuristic_from_fao_et0', kj?.watering?.frequency ?? '?');
     check('a shaded balcony is not offered fruiting crops', (kj?.recommended ?? []).every((r) => r.crop_id !== 'tomato'), (kj?.recommended ?? []).map((r) => r.crop_id).join(','));
     check('kitchen advice flags bought water and a dry outlook', (kj?.warnings ?? []).some((w) => w.code === 'bought_water') && (kj?.warnings ?? []).some((w) => w.code === 'dry_season_outlook'), (kj?.warnings ?? []).map((w) => w.code).join(','));
-    check('kitchen advice declares its data is an unverified draft', kj?.data_status === 'unverified_draft' && Boolean(kj?.caveat), kj?.data_status ?? '?');
+    check('kitchen advice declares its verification status and caveat', kj?.data_status === 'partially_verified' && Boolean(kj?.caveat), kj?.data_status ?? '?');
     check('kitchen advice says what will NOT grow in a container', (kj?.unsuitable ?? []).length > 0, `${kj?.unsuitable?.length ?? 0} excluded`);
 
     const kitchenSw = await fetch(`${base}/kitchen?lat=-1.28496&lon=36.89468&aspect=full_sun&lang=sw`);

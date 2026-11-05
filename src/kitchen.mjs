@@ -10,10 +10,13 @@
  * DATA STATUS - READ THIS BEFORE QUOTING ANY NUMBER
  * -------------------------------------------------
  * The container profiles in data/kitchen.json carry `_provenance.status =
- * "unverified_draft"`. Depths, volumes and first-harvest windows are standard
- * horticultural ranges, not Kenyan trial measurements. Every payload this module
- * returns therefore includes `data_status` and a `caveat`, and the two are not
- * optional: a caller that drops them is presenting draft numbers as fact.
+ * "partially_verified"` (2026-11-05): harvest windows, harvest styles and the
+ * crop exclusions were matched against published Kenyan and institutional
+ * sources - every citation in docs/CONTAINER-DATA-SOURCES.md - while the
+ * container depths and volumes remain app-derived horticultural defaults.
+ * Every payload this module returns therefore includes `data_status` and a
+ * `caveat`, and the two are not optional: a caller that drops them is
+ * presenting defaults as fact.
  *
  * Watering frequency is derived from FAO ET0, which is a real physical quantity
  * from Open-Meteo. The mapping from ET0 to "water twice a day" is a heuristic,
@@ -28,8 +31,10 @@ export const containers = kitchenJson.containers;
 export const unsuitableInContainers = kitchenJson.unsuitable_in_containers;
 
 export const DATA_STATUS_CAVEAT =
-  'Container depths, volumes and harvest timings are standard horticultural ranges, not Kenyan trial data. ' +
-  'Treat them as a starting point and confirm with a county extension officer before relying on them commercially.';
+  'Harvest windows and styles were matched on 5 Nov 2026 against published Kenyan and institutional sources ' +
+  '(MOALF-SHEP/JICA, FAO, KALRO; citations in docs/CONTAINER-DATA-SOURCES.md). Container depths and volumes ' +
+  'remain horticultural defaults, not Kenyan trial data. Confirm with a county extension officer before ' +
+  'relying on them commercially.';
 
 /**
  * Map daily reference evapotranspiration (FAO ET0, mm/day) to a watering rhythm.

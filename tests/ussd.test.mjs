@@ -127,9 +127,34 @@ test('every USSD screen stays within a single-screen budget', () => {
   const levels = Object.keys(i18n.sw.levels);
   assert.ok(levels.length > 0);
   for (const locale of ['sw', 'en']) {
-    for (const t of ['', '1', '2', '3', '4', '9']) {
+    for (const t of ['', '1', '2', '3', '4', '5', '9']) {
       const body = run(t, locale).body;
       assert.ok(body.length <= 320, `${locale} screen "${t}" is too long for USSD (${body.length} chars)`);
     }
   }
+});
+
+test('menu advertises option 5 in both languages', () => {
+  assert.ok(ussdMenu({ site, locale: 'sw' }).includes('5. Kilimo cha gunny sacks'));
+  assert.ok(ussdMenu({ site, locale: 'en' }).includes('5. Sack and container gardening'));
+});
+
+test('option 5 answers sack gardening with named crops, harvest weeks and the sourced-data caveat', () => {
+  for (const locale of ['sw', 'en']) {
+    const r = run('5', locale);
+    assert.equal(r.end, true);
+    assert.match(r.body, locale === 'sw' ? /gunny sacks/ : /Sack and container/);
+    assert.match(r.body, locale === 'sw' ? /wiki \d/ : /wk \d/);
+    assert.match(r.body, locale === 'sw' ? /afisa kilimo/ : /extension officer/);
+    // at least three named crops must survive the ranking and the crop pack
+    const named = (r.body.split('\n')[1].match(/\(w(?:iki|k) \d+\)/g) ?? []).length;
+    assert.ok(named >= 3, `only ${named} crops named for ${locale}: ${r.body}`);
+  }
+});
+
+test('option 5 reorders for a dry season: drought-forgiving crops keep their place', () => {
+  const dry = { months: [{ month: '2026-11', calendar_month: 11, tercile: 'below', confidence: 'high', complete: true }] };
+  const r = ussdResponse('5', { site, advisory: advisory('sw'), outlook: dry, crops, locale: 'sw' });
+  assert.equal(r.end, true);
+  assert.ok(r.body.length > 0 && r.body.length <= 320);
 });

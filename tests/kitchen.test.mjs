@@ -50,13 +50,30 @@ test('every container profile carries the fields the UI needs', () => {
   }
 });
 
-test('the draft status of container numbers is declared, not hidden', () => {
-  assert.equal(kitchenProvenance.status, 'unverified_draft');
-  assert.match(kitchenProvenance.warning, /NOT measured Kenyan trial data/);
+test('the verification status of container numbers is declared, not hidden', () => {
+  assert.equal(kitchenProvenance.status, 'partially_verified');
+  assert.match(kitchenProvenance.warning, /app-derived horticultural defaults/);
+  assert.equal(kitchenProvenance.verification_doc, 'docs/CONTAINER-DATA-SOURCES.md');
   const adv = buildKitchenAdvisory({ site, crops });
-  assert.equal(adv.data_status, 'unverified_draft');
+  assert.equal(adv.data_status, 'partially_verified');
   assert.equal(adv.caveat, DATA_STATUS_CAVEAT);
   assert.ok(adv.caveat.length > 40, 'the caveat must actually explain the limitation');
+});
+
+test('harvest windows match the published ranges verified on 2026-11-05', () => {
+  // docs/CONTAINER-DATA-SOURCES.md pins every one of these to a fetched source.
+  const byId = new Map(containers.map((c) => [c.crop_id, c]));
+  // PMC 2024 (peer-reviewed): sweetpotato leaf harvest from 8 weeks after planting
+  assert.deepEqual(byId.get('sweetpotato').days_to_first_harvest, [56, 60]);
+  // Dryland Seed M66/K80 + SHEP: flowering 50-60 d, dry grain 80-90 d -> green pods 65-80 d
+  assert.deepEqual(byId.get('cowpea').days_to_first_harvest, [65, 80]);
+  // Livestock Africa handbook: flowering 60-80 d, grain 80-115 d -> green pods 75-100 d
+  assert.deepEqual(byId.get('dolichos').days_to_first_harvest, [75, 100]);
+  // FAO sack gardens + SHEP: tomatoes are picked repeatedly over 3-4 months, not one window
+  assert.equal(byId.get('tomato').harvest_style, 'repeated_picking');
+  // kales confirmed as-is: Jua Kenya (8-10 weeks from seed) + SHEP (6 weeks after transplant)
+  assert.deepEqual(byId.get('kales').days_to_first_harvest, [50, 70]);
+  assert.deepEqual(byId.get('amaranth').days_to_first_harvest, [30, 40]);
 });
 
 test('lightClass maps balcony aspect to a usable light class', () => {

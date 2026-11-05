@@ -571,7 +571,10 @@ export async function handle(request, env = {}) {
         ward: params.get('ward') ?? wardRef,
         site: params.get('site') ?? siteId,
       });
-      const { site, outlook, advisory } = await advisoryFor({ target, lang: params.get('lang') ?? lang, irrigation: false });
+      // Real USSD gateways POST everything in the body, so a body-level lang
+      // wins over the query string; the query string wins over the default.
+      const ussdLang = ['sw', 'en'].includes(params.get('lang')) ? params.get('lang') : lang;
+      const { site, outlook, advisory } = await advisoryFor({ target, lang: ussdLang, irrigation: false });
       // USSD cannot ask for a roof size or household count, so option 4 plans
       // with the standard 30 m2 roof and the KNBS county household default.
       // A failure here must not take the menu down: food degrades to null.
@@ -584,13 +587,13 @@ export async function handle(request, env = {}) {
           crops,
           roof_m2: 30,
           people,
-          locale: lang,
+          locale: ussdLang,
           now: new Date().toISOString().slice(0, 7),
         });
       } catch {
         food = null;
       }
-      const result = ussdResponse(params.get('text') ?? '', { site, advisory, outlook, crops, food, locale: lang });
+      const result = ussdResponse(params.get('text') ?? '', { site, advisory, outlook, crops, food, locale: ussdLang });
       return text(`${result.end ? 'END' : 'CON'} ${result.body}`);
     }
 

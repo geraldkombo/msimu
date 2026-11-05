@@ -1,4 +1,5 @@
 import { i18n } from './i18n.mjs';
+import { suitableContainers } from './kitchen.mjs';
 
 const firstSentence = (s) => String(s ?? '').split(/(?<=[.!?])\s/)[0].trim();
 
@@ -10,8 +11,8 @@ function cropLine(c, locale) {
 
 export function ussdMenu({ site, locale }) {
   return locale === 'sw'
-    ? `Karibu Msimu - ${site.name}.\n1. Ushauri wa kupanda\n2. Hali ya mvua msimu huu\n3. Kuhusu huduma hii\n4. Mpango wa chakula na maji`
-    : `Welcome to Msimu - ${site.name}.\n1. Planting advice\n2. This season's rainfall outlook\n3. About this service\n4. Food and water plan`;
+    ? `Karibu Msimu - ${site.name}.\n1. Ushauri wa kupanda\n2. Hali ya mvua msimu huu\n3. Kuhusu huduma hii\n4. Mpango wa chakula na maji\n5. Kilimo cha gunny sacks`
+    : `Welcome to Msimu - ${site.name}.\n1. Planting advice\n2. This season's rainfall outlook\n3. About this service\n4. Food and water plan\n5. Sack and container gardening`;
 }
 
 export function ussdResponse(text, { site, advisory, outlook, crops, food, locale = 'sw' }) {
@@ -79,6 +80,33 @@ export function ussdResponse(text, { site, advisory, outlook, crops, food, local
       };
     }
     return { end: true, body: out.join('\n') };
+  }
+
+  if (t === '5') {
+    // Sack gardening for the household with no field: the same seasonal signal,
+    // translated for containers. Ranked by the pure kitchen module (fastest
+    // harvest first; dry-tercile reordering included), named from the crop pack,
+    // priced in weeks-to-first-harvest because that is what a sack farmer plans
+    // around. Data status is honest: standard horticultural ranges, labelled.
+    const month = new Date().getUTCMonth() + 1;
+    const firstKnown = (outlook?.months ?? []).find((m) => m.complete && m.tercile !== 'unknown');
+    const tercile = firstKnown?.tercile ?? 'near';
+    const { ranked } = suitableContainers({ light: 'part_shade_ok', month, tercile });
+    const wk = locale === 'sw' ? 'wiki' : 'wk';
+    const names = ranked
+      .slice(0, 4)
+      .map((r) => {
+        const c = byId.get(r.crop_id);
+        const nm = c ? (locale === 'sw' ? (c.sw ?? c.en) : (c.en ?? c.sw)) : String(r.crop_id).replace(/_/g, ' ');
+        const weeks = Math.ceil((r.days_to_first_harvest[0] + r.days_to_first_harvest[1]) / 2 / 7);
+        return `${nm} (${wk} ${weeks})`;
+      })
+      .join(', ');
+    const body =
+      locale === 'sw'
+        ? `Kilimo cha gunny sacks na mabeseni:\nPanda: ${names}.\nMwagilia asubuhi na jioni - mabeseni hukauka haraka kuliko shamba.\nVipimo vya mavuno kutoka miongozo iliyochapishwa Kenya - thibitisha kwa afisa kilimo wa kata.`
+        : `Sack and container gardening:\nPlant: ${names}.\nWater morning and evening - sacks dry out far faster than a field.\nHarvest windows from published Kenyan guides; sizes are defaults - confirm with your ward extension officer.`;
+    return { end: true, body };
   }
 
   return {

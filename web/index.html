@@ -1,13 +1,20 @@
 <!DOCTYPE html>
-<html lang="sw">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Msimu - seasonal advisory</title>
+<title>Msimu - seasonal forecast to farming decision</title>
 <meta name="description" content="Seasonal climate outlook and farming advisory for ASAL Kenya. ECMWF SEAS5 via Open-Meteo, ERA5 2005-2024 baseline." />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<meta name="theme-color" content="#14342b" />
+<meta property="og:title" content="Msimu - seasonal forecast to farming decision" />
+<meta property="og:description" content="Ward-level seasonal rain outlook, a household food and water plan, and kitchen-garden advice for Kenya. Free, bilingual SW/EN, no app to install." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://msimu.shikunyi.workers.dev/" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2314342b'/%3E%3Ccircle cx='16' cy='32' r='7' fill='%232278a8'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%238b8f94'/%3E%3Ccircle cx='48' cy='32' r='7' fill='%23c4761c'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css" />
 <style>
   :root {
+    color-scheme: light;
     --paper: #f3f1ea;
     --ink: #201a12;
     --ink-2: #5c564a;
@@ -36,10 +43,18 @@
   :focus-visible { outline: 3px solid rgba(46, 125, 79, 0.5); outline-offset: 2px; }
 
   header {
+    position: relative; overflow: hidden;
     display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between;
     background: linear-gradient(150deg, var(--forest-2), var(--forest) 62%);
     color: #f0ede1; margin: -28px -20px 24px; padding: 26px 24px; border-radius: 0 0 20px 20px;
   }
+  /* The subject is rain: faint isohyet-style wave lines behind the controls,
+     drawn as inline SVG so the page still makes zero third-party requests. */
+  header::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='240' viewBox='0 0 560 240'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='2'%3E%3Cpath d='M0 40 Q 70 18 140 40 T 280 40 T 420 40 T 560 40'/%3E%3Cpath d='M0 95 Q 70 68 140 95 T 280 95 T 420 95 T 560 95'/%3E%3Cpath d='M0 150 Q 70 120 140 150 T 280 150 T 420 150 T 560 150'/%3E%3Cpath d='M0 205 Q 70 172 140 205 T 280 205 T 420 205 T 560 205'/%3E%3C/g%3E%3C/svg%3E") right center / 560px 240px no-repeat;
+  }
+  header > * { position: relative; }
   header :focus-visible { outline-color: rgba(240, 237, 225, 0.55); }
   .brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
   h1 { font-size: 34px; letter-spacing: -0.03em; margin: 0; font-weight: 900; color: #fff; }
@@ -52,12 +67,14 @@
   }
   .tag { color: #a9bfae; font-size: 14px; }
   .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  select, button, input[type="number"] {
+  select, button, input[type="number"], input[type="search"] {
     font: inherit; padding: 8px 12px; border: 1px solid var(--line); background: var(--card);
-    color: var(--ink); border-radius: 9px;
+    color: var(--ink); border-radius: 10px; min-height: 38px;
+    transition: border-color 0.12s ease, background-color 0.12s ease;
   }
   button { cursor: pointer; font-weight: 650; }
   button:hover, select:hover { border-color: var(--leaf); }
+  button:active { transform: translateY(1px); }
   button[aria-pressed="true"] { background: var(--leaf); border-color: var(--leaf); color: #fff; }
   #bfood, #plookup, #geolocate, #pkitchen, #pskill, #bphoto, #bsat, #bshare {
     background: var(--leaf); border-color: var(--leaf); color: #fff;
@@ -77,7 +94,10 @@
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; margin-top: 22px; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
 
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+    box-shadow: 0 1px 2px rgba(32, 26, 18, 0.04), 0 10px 26px -14px rgba(32, 26, 18, 0.14);
+  }
   .card h2 {
     font-size: 13.5px; color: var(--ink); margin: 0 0 14px; font-weight: 750; letter-spacing: 0.01em;
     display: flex; align-items: center; gap: 9px;
@@ -124,15 +144,17 @@
     display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px;
     font-size: 13px; font-weight: 750; color: #fff; background: var(--unknown); letter-spacing: 0.01em;
   }
-  .chip.above { background: #3d92c9; }
-  .chip.near { background: #6f747a; }
-  .chip.below { background: var(--below); }
-  .chip.unknown { background: #7d786d; }
-  .month { font-size: 42px; font-weight: 900; letter-spacing: -0.025em; line-height: 1.05; }
+  /* Chip backgrounds keep white text at WCAG AA contrast (4.5:1 or better). */
+  .chip.above { background: #1f6f9f; }
+  .chip.near { background: #64696f; }
+  .chip.below { background: #a4600f; }
+  .chip.unknown { background: #6e695f; }
+  .month { font-size: 42px; font-weight: 900; letter-spacing: -0.025em; line-height: 1.05; font-variant-numeric: tabular-nums; }
 
   .strip { display: flex; gap: 7px; margin-top: 22px; height: 108px; }
   .strip .col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; height: 100%; }
-  .strip .track { position: relative; flex: 1; background: rgba(255, 255, 255, 0.07); border-radius: 7px; }
+  .strip .track { position: relative; flex: 1; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 7px; }
+  .strip-key { font-size: 11.5px; color: #b9c8ba; margin: 10px 0 0; }
   .strip .barfill {
     position: absolute; left: 0; right: 0; bottom: 0; border-radius: 7px 7px 3px 3px;
     transform-origin: bottom; animation: grow 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both;
@@ -140,7 +162,10 @@
   .strip .med { position: absolute; left: -2px; right: -2px; height: 0; border-top: 2px dashed rgba(255, 255, 255, 0.55); }
   .strip b { font-size: 11px; font-weight: 650; color: #b9c8ba; text-align: center; letter-spacing: 0.02em; }
   @keyframes grow { from { transform: scaleY(0); } }
-  @media (prefers-reduced-motion: reduce) { .strip .barfill { animation: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .strip .barfill { animation: none; }
+    select, button, input { transition: none; }
+  }
 
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   /* Phones: the 7-month table keeps its columns and scrolls sideways inside its
@@ -155,7 +180,8 @@
   #psearch-results button:hover { border-color: #2278a8; }
   th, td { text-align: right; padding: 8px 6px; border-bottom: 1px solid var(--line); font-size: 13.5px; }
   th:first-child, td:first-child { text-align: left; }
-  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); font-weight: 700; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); font-weight: 700; border-bottom: 2px solid var(--line); }
+  tbody tr:nth-child(even) { background: rgba(236, 231, 217, 0.4); }
   tbody tr:hover { background: var(--sand); }
   .partial { color: var(--ink-2); font-style: italic; }
   .bar { position: relative; height: 10px; background: var(--sand); border-radius: 5px; overflow: hidden; min-width: 90px; }
@@ -184,6 +210,7 @@
     .strip { height: 86px; gap: 5px; }
     #map { height: 260px; }
     th, td { padding: 7px 4px; font-size: 12.5px; }
+    select, button, input[type="number"], input[type="search"] { min-height: 44px; }
   }
 </style>
 </head>
@@ -337,7 +364,7 @@
   </footer>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="/vendor/leaflet/leaflet.js"></script>
 <script>
 const T = {
   sw: {
@@ -353,7 +380,7 @@ const T = {
     mapLegend: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', noData: 'hakuna taarifa bado' },
     noWard: 'hakuna taarifa bado',
     wardAttrib: 'Mipaka ya kata: geoBoundaries (CC BY 4.0)',
-    now: 'Kipindi kinachofuata', tableH: 'Mvua na hatua za kilimo', table: (n) => `Miezi ${n} ijayo: mvua inayotarajiwa dhidi ya kawaida ya 2005-2024 kwa wadi hii (ECMWF SEAS5 kupitia Open-Meteo). Hatua za kilimo ni kanuni, si makisio.`,
+    now: 'Kipindi kinachofuata', stripKey: 'Urefu wa mstari = mvua inayotarajiwa · dashi = wastani wa miaka 20', tableH: 'Mvua na hatua za kilimo', table: (n) => `Miezi ${n} ijayo: mvua inayotarajiwa dhidi ya kawaida ya 2005-2024 kwa wadi hii (ECMWF SEAS5 kupitia Open-Meteo). Hatua za kilimo ni kanuni, si makisio.`,
     advice: 'Ushauri', loading: 'Inapakia…',
     cols: ['Mwezi', 'Mvua inayotarajiwa', 'Kawaida (2005-2024)', 'Hali', 'Uhakika', 'Kilimo: cha kufanya'],
     tercile: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', unknown: 'hakuna taarifa' },
@@ -386,7 +413,7 @@ const T = {
     mapLegend: { above: 'above normal', near: 'near normal', below: 'below normal', noData: 'no data yet' },
     noWard: 'no data yet',
     wardAttrib: 'Ward boundaries: geoBoundaries (CC BY 4.0)',
-    now: 'Next usable month', tableH: 'Rain and farming actions', table: (n) => `Next ${n} months: rain expected vs the 2005-2024 usual for this ward (ECMWF SEAS5 via Open-Meteo). The farming actions are rules, not guesses.`,
+    now: 'Next usable month', stripKey: 'Bar height = rain expected · dashed line = 20-year median', tableH: 'Rain and farming actions', table: (n) => `Next ${n} months: rain expected vs the 2005-2024 usual for this ward (ECMWF SEAS5 via Open-Meteo). The farming actions are rules, not guesses.`,
     advice: 'Advisory', loading: 'Loading…',
     cols: ['Month', 'Rain expected', 'Usual rain (2005-2024)', 'Outlook', 'How sure', 'What to do - farming'],
     tercile: { above: 'above normal', near: 'near normal', below: 'below normal', unknown: 'unknown' },
@@ -631,7 +658,8 @@ function renderStrip(months, t) {
         <span class="barfill" style="height:${h}%;background:${c};${dim}animation-delay:${i * 60}ms"></span>
         <i class="med" style="bottom:${mh}%"></i>
       </div><b>${fmtMonthKey(m.month).slice(0, 3)}</b></div>`;
-    }).join('') + '</div>';
+    }).join('') + '</div>' +
+    `<p class="strip-key">${t.stripKey ?? ''}</p>`;
 }
 
 function renderAdvice(d, t) {
@@ -861,9 +889,11 @@ loadCounties().then(refresh);
  * shared `lang` binding rather than duplicating language state, and re-renders
  * when either language button is pressed.
  *
- * Container depths and harvest windows come from the API with
- * data_status: "unverified_draft". That label is rendered every time on purpose:
- * these are standard horticultural ranges, not Kenyan trial data.
+ * Container data comes from the API with data_status: "partially_verified":
+ * harvest windows and styles were matched on 5 Nov 2026 against published
+ * Kenyan and institutional sources (docs/CONTAINER-DATA-SOURCES.md), while the
+ * container depths and volumes remain app-derived defaults. The payload's
+ * caveat says exactly that, and it is rendered every time on purpose.
  */
 const PT = {
   sw: {
@@ -895,7 +925,6 @@ const PT = {
     unsuitable: 'Haifai vyomboni',
     warnings: 'Tahadhari',
     depth: 'kina', litres: 'lita', days: 'siku', spacing: 'nafasi',
-    draftNote: 'Vipimo vya vyombo ni makadirio ya kawaida ya kilimo, si data ya majaribio ya Kenya. Thibitisha na afisa kilimo wa kaunti kabla ya kutegemea kwa biashara.',
     skillH: 'Ubao wa usahihi wa mifano ya hali ya hewa',
     skillWindow: (w) => `Dirisha: ${w.start} hadi ${w.end} (siku ${w.days.length}, ikimalizia jana).`,
     skillObserved: (d) => `Mvua iliyonyesha: jumla mm ${d.observed_total_mm}, siku zenye mvua ${d.wet_days} (kizingiti mm ${d.threshold_mm}).`,
@@ -971,7 +1000,6 @@ const PT = {
     unsuitable: 'Not suited to containers',
     warnings: 'Warnings',
     depth: 'depth', litres: 'litres', days: 'days', spacing: 'spacing',
-    draftNote: 'Container measurements are standard horticultural ranges, not Kenyan trial data. Confirm with a county extension officer before relying on them commercially.',
     skillH: 'Model accuracy scoreboard',
     skillWindow: (w) => `Window: ${w.start} to ${w.end} (${w.days.length} days, ending yesterday).`,
     skillObserved: (d) => `Rain that fell: ${d.observed_total_mm} mm total, ${d.wet_days} wet days (threshold ${d.threshold_mm} mm).`,
@@ -1099,7 +1127,7 @@ function renderKitchen(d) {
     <p><strong>${esc(t.unsuitable)}:</strong> ${unsuit || '-'}</p>
     <p><strong>${esc(t.warnings)}:</strong></p>
     <ul>${warns}</ul>
-    <p class="warn">${esc(d.data_status === 'unverified_draft' ? t.draftNote : d.caveat)}</p>`;
+    <p class="warn">${esc(d.caveat ?? '')}</p>`;
 }
 
 function renderSkill(d) {

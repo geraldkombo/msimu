@@ -1,9 +1,11 @@
 {
   "_provenance": {
-    "status": "unverified_draft",
-    "warning": "Container depths, volumes and first-harvest timings below are standard horticultural ranges, NOT measured Kenyan trial data. They are shipped so the kitchen-garden feature works, and each one must be confirmed against KALRO, county extension officers or a published container-gardening trial before it is quoted as fact in an article or shown to a farmer without a caveat. Do not treat these numbers as verified.",
+    "status": "partially_verified",
+    "warning": "Harvest windows (days_to_first_harvest), harvest styles and the unsuitable-crop exclusions below were matched on 2026-11-05 against published Kenyan and institutional sources: MOALF-SHEP/JICA crop guides, the FAO sack-gardens factsheet, KALRO, a Kenyan seed-company catalogue, Kenyan container-gardening guides and a peer-reviewed trial. Every citation, verbatim quote and verdict lives in docs/CONTAINER-DATA-SOURCES.md. The min_depth_cm and min_volume_litres values remain app-derived horticultural defaults: no Kenyan official source publishes per-crop container minimums (only kales, corroborated at 30 cm / about 20 L by a Kenyan guide). Do not quote the dimensions as measured trial data.",
     "crop_ids_from": "data/crops.json",
     "built_at": "2026-10-31",
+    "verified_at": "2026-11-05",
+    "verification_doc": "docs/CONTAINER-DATA-SOURCES.md",
     "cost": "$0, no API key"
   },
   "containers": [
@@ -16,8 +18,8 @@
       "support_needed": false,
       "shade_tolerance": "part_shade_ok",
       "spacing_cm": 10,
-      "notes_en": "Fastest return of any container leafy green. Sow densely, thin as you harvest.",
-      "notes_sw": "Mchicha hukua haraka kuliko mboga nyingine za majani. Panda kwa karibu, una kadiri unavyovuna."
+      "notes_en": "Fastest return of any container leafy green: leaves can start from 21 days when direct-sown; 30-40 is the safe planning window. Sow densely, thin as you harvest.",
+      "notes_sw": "Mchicha hukua haraka kuliko mboga nyingine za majani: majani yanaweza kuanza kupatikana siku 21 ukipanda mbegu moja kwa moja; siku 30-40 ni makadirio salama. Panda kwa karibu, una kadiri unavyovuna."
     },
     {
       "crop_id": "kales",
@@ -28,56 +30,56 @@
       "support_needed": false,
       "shade_tolerance": "part_shade_ok",
       "spacing_cm": 30,
-      "notes_en": "One plant feeds a household for months if outer leaves are picked and the crown is left.",
-      "notes_sw": "Mmea mmoja unaweza kutosha familia kwa miezi ukichukua majani ya nje na kuacha kiini."
+      "notes_en": "One plant feeds a household for months if outer leaves are picked and the crown is left. Weekly cuts keep it producing.",
+      "notes_sw": "Mmea mmoja unaweza kutosha familia kwa miezi ukichukua majani ya nje na kuacha kiini. Kuvuna kila wiki kunaendeleza mavuno."
     },
     {
       "crop_id": "tomato",
       "min_depth_cm": 35,
       "min_volume_litres": 25,
       "days_to_first_harvest": [70, 90],
-      "harvest_style": "single_harvest_window",
+      "harvest_style": "repeated_picking",
       "support_needed": true,
       "shade_tolerance": "full_sun_only",
       "spacing_cm": 45,
-      "notes_en": "Needs full sun, staking and consistent water. Fruit splits if watering swings between dry and flooded.",
-      "notes_sw": "Inahitaji jua kamili, kufungwa kamba na maji ya mara kwa mara. Matunda yupasuka maji yakibadilika sana."
+      "notes_en": "Needs full sun, staking and consistent water. Pick ripe fruit regularly: most varieties keep cropping over 3-4 months; early types can start at 60 days from transplanting.",
+      "notes_sw": "Inahitaji jua kamili, kufungwa kamba na maji ya mara kwa mara. Vuna matunda yaliyoiva mara kwa mara: aina nyingi huendelea kuzaa miezi 3-4; aina za mapema zinaweza kuanza siku 60 baada ya kupandikizwa."
     },
     {
       "crop_id": "cowpea",
       "min_depth_cm": 25,
       "min_volume_litres": 15,
-      "days_to_first_harvest": [60, 70],
+      "days_to_first_harvest": [65, 80],
       "harvest_style": "repeated_picking",
       "support_needed": false,
       "shade_tolerance": "full_sun_only",
       "spacing_cm": 20,
-      "notes_en": "Tolerates dry conditions and poor media better than most. Leaves are also edible.",
-      "notes_sw": "Inastahimili ukame na udongo mbaya kuliko nyingi. Majani pia huliwa."
+      "notes_en": "Tolerates dry conditions and poor media better than most. Green pods from about 9-11 weeks; the leaves are also edible and ready in 3-4 weeks.",
+      "notes_sw": "Inastahimili ukame na udongo mbaya kuliko nyingi. Makonde mabichi kuanzia wiki 9-11; majani pia huliwa na yapo tayari wiki 3-4."
     },
     {
       "crop_id": "dolichos",
       "min_depth_cm": 30,
       "min_volume_litres": 20,
-      "days_to_first_harvest": [70, 90],
+      "days_to_first_harvest": [75, 100],
       "harvest_style": "repeated_picking",
       "support_needed": true,
       "shade_tolerance": "full_sun_only",
       "spacing_cm": 30,
-      "notes_en": "A climber. Give it a balcony railing or string and it will crop over a long window.",
-      "notes_sw": "Ni mpanda juu. Ipe kizingiti cha roshani au kamba itazaa kwa muda mrefu."
+      "notes_en": "A climber. Give it a balcony railing or string; green pods from about 11-14 weeks, and continued picking keeps the crop coming.",
+      "notes_sw": "Ni mpanda juu. Ipe kizingiti cha roshani au kamba; makonde mabichi kuanzia wiki 11-14, na kuendelea kuvuna kunakuza mavuno."
     },
     {
       "crop_id": "sweetpotato",
       "min_depth_cm": 30,
       "min_volume_litres": 30,
-      "days_to_first_harvest": [30, 45],
+      "days_to_first_harvest": [56, 60],
       "harvest_style": "leaves_then_tubers",
       "support_needed": false,
       "shade_tolerance": "part_shade_ok",
       "spacing_cm": 30,
-      "notes_en": "Grown in a container for leaves from about a month; tubers need a deep sack and 4 to 5 months.",
-      "notes_sw": "Hupandwa kwenye chombo kwa ajili ya majani kuanzia mwezi mmoja; viazi vinahitaji gunia kirefu na miezi 4 hadi 5."
+      "notes_en": "Grown in a container for leaves from about 8 weeks; tubers need a deep sack (90 kg grain sacks are the Kenyan standard) and 4-7 months.",
+      "notes_sw": "Hupandwa kwenye chombo kwa ajili ya majani kuanzia wiki 8; viazi vinahitaji gunia kirefu (magunia ya nafaka ya kilo 90 ndiyo ya kawaida Kenya) na miezi 4-7."
     }
   ],
   "unsuitable_in_containers": [
