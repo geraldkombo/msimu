@@ -287,7 +287,7 @@
   </div>
 
   <section class="card" style="margin-top:20px">
-    <h2 id="h-table">Miezi 7 ijayo (ECMWF SEAS5 vs wastani wa ERA5 2005-2024)</h2>
+    <h2 id="h-table">Mvua na hatua za kilimo</h2>
     <div id="table"><div class="state">Inapakia&hellip;</div></div>
     <p class="note" id="table-note" style="margin-top:10px"></p>
   </section>
@@ -353,7 +353,7 @@ const T = {
     mapLegend: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', noData: 'hakuna taarifa bado' },
     noWard: 'hakuna taarifa bado',
     wardAttrib: 'Mipaka ya kata: geoBoundaries (CC BY 4.0)',
-    now: 'Kipindi kinachofuata', table: 'Miezi 7 ijayo: mvua inayotarajiwa dhidi ya kawaida ya 2005-2024 kwa wadi hii (ECMWF SEAS5 kupitia Open-Meteo). Hatua za kilimo ni kanuni, si makisio.',
+    now: 'Kipindi kinachofuata', tableH: 'Mvua na hatua za kilimo', table: (n) => `Miezi ${n} ijayo: mvua inayotarajiwa dhidi ya kawaida ya 2005-2024 kwa wadi hii (ECMWF SEAS5 kupitia Open-Meteo). Hatua za kilimo ni kanuni, si makisio.`,
     advice: 'Ushauri', loading: 'Inapakia…',
     cols: ['Mwezi', 'Mvua inayotarajiwa', 'Kawaida (2005-2024)', 'Hali', 'Uhakika', 'Kilimo: cha kufanya'],
     tercile: { above: 'juu ya kawaida', near: 'kawaida', below: 'chini ya kawaida', unknown: 'hakuna taarifa' },
@@ -386,7 +386,7 @@ const T = {
     mapLegend: { above: 'above normal', near: 'near normal', below: 'below normal', noData: 'no data yet' },
     noWard: 'no data yet',
     wardAttrib: 'Ward boundaries: geoBoundaries (CC BY 4.0)',
-    now: 'Next usable month', table: 'Next 7 months: rain expected vs the 2005-2024 usual for this ward (ECMWF SEAS5 via Open-Meteo). The farming actions are rules, not guesses.',
+    now: 'Next usable month', tableH: 'Rain and farming actions', table: (n) => `Next ${n} months: rain expected vs the 2005-2024 usual for this ward (ECMWF SEAS5 via Open-Meteo). The farming actions are rules, not guesses.`,
     advice: 'Advisory', loading: 'Loading…',
     cols: ['Month', 'Rain expected', 'Usual rain (2005-2024)', 'Outlook', 'How sure', 'What to do - farming'],
     tercile: { above: 'above normal', near: 'near normal', below: 'below normal', unknown: 'unknown' },
@@ -541,7 +541,7 @@ function applyStrings(t) {
   $('base-street').textContent = t.base.street;
   $('base-sat').textContent = t.base.sat;
   $('h-now').textContent = t.now;
-  $('h-table').textContent = t.table;
+  $('h-table').textContent = t.tableH;
   $('h-advice').textContent = t.advice;
   $('src').textContent = t.src;
   $('caveat').textContent = t.caveat;
@@ -604,7 +604,7 @@ function renderTable(months, t) {
       <td style="text-align:left;font-size:12.5px;line-height:1.45">${actionFor(m, t)}</td>
     </tr>`;
   }).join('');
-  host.innerHTML = `<table><caption class="note" style="caption-side:top;text-align:left;padding-bottom:6px">${t.table}</caption>
+  host.innerHTML = `<table><caption class="note" style="caption-side:top;text-align:left;padding-bottom:6px">${t.table(months.length)}</caption>
     <thead><tr>${t.cols.map((c, i) => `<th${i === 0 || i >= 3 ? ' style="text-align:left"' : ''}>${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
 }
 
